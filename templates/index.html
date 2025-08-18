@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Score Creation Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Custom Score Creation Tool</h1>
+        
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="step {{ 'active' if step == 1 else 'completed' if step > 1 else '' }}">
+                <span class="step-number">1</span>
+                <span class="step-name">Select Example</span>
+            </div>
+            {% for i in range(2, 8) %}
+                {% if i != 4 or dev_mode %}
+                    <div class="step {{ 'active' if i == step else 'completed' if i < step else '' }}">
+                        <span class="step-number">{{ i }}</span>
+                        <span class="step-name">
+                            {% if i == 2 %}Score Description
+                            {% elif i == 3 %}Generate Classes
+                            {% elif i == 4 %}Review Prompt
+                            {% elif i == 5 %}Run Inference
+                            {% elif i == 6 %}Provide Feedback
+                            {% elif i == 7 %}Final Results
+                            {% endif %}
+                        </span>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            {% if step == 7.5 %}
+                <div class="step active">
+                    <span class="step-number">7.5</span>
+                    <span class="step-name">Prompt Analysis</span>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="alert alert-warning">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Step Content -->
+        <div class="step-content">
+            {% if step == 1 %}
+                <!-- Step 1: Data Source Selection -->
+                <div class="step-container">
+                    <h2>Step 1: Select Survey Data</h2>
+                    <p>Choose a survey dataset to work with:</p>
+                    
+                    <!-- Data Source Selection Tabs -->
+                    <div class="data-source-tabs">
+                        <button type="button" class="tab-button active" data-tab="examples">Pre-built Examples</button>
+                        <button type="button" class="tab-button" data-tab="upload">Upload Your Own Data</button>
+                    </div>
+                    
+                    <!-- Pre-built Examples Tab -->
+                    <div class="tab-content active" id="examples-tab">
+                        <form method="POST" action="{{ url_for('process_step') }}">
+                            <input type="hidden" name="data_source" value="examples">
+                            {% if examples %}
+                                {% for filename, example in examples.items() %}
+                                    <div class="example-option">
+                                        <label>
+                                            <input type="radio" name="selected_example" value="{{ filename }}">
+                                            <div class="example-card">
+                                                <h3>{{ example.name }}</h3>
+                                                <p>{{ example.count }} responses</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No survey examples found. Please add JSON files to the examples/ directory.
+                                </div>
+                            {% endif %}
+                            
+                            <button type="submit" class="btn btn-primary">Next Step</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Custom Upload Tab -->
+                    <div class="tab-content" id="upload-tab">
+                        <div class="upload-section">
+                            <h3>Upload Your Data File</h3>
+                            <p>Supported formats: JSON (array of objects) or CSV files</p>
+                            
+                            <!-- File Upload Zone -->
+                            <div class="upload-zone" id="upload-zone">
+                                <div class="upload-content">
+                                    <div class="upload-icon">📁</div>
+                                    <p><strong>Click to upload</strong> or drag and drop your file here</p>
+                                    <p class="upload-hint">JSON or CSV files only (max 10MB)</p>
+                                    <input type="file" id="file-input" accept=".json,.csv" style="display: none;">
+                                </div>
+                            </div>
+                            
+                            <!-- Upload Progress -->
+                            <div class="upload-progress" id="upload-progress" style="display: none;">
+                                <div class="progress">
+                                    <div class="progress-bar-inner" id="upload-progress-bar" style="width: 0%"></div>
+                                </div>
+                                <p id="upload-status">Uploading file...</p>
+                            </div>
+                            
+                            <!-- CSV Column Selection (shown after CSV upload) -->
+                            <div class="column-selection" id="column-selection" style="display: none;">
+                                <h4>Select Comment Column</h4>
+                                <p>Choose the column that contains the survey responses/comments:</p>
+                                <div class="csv-preview" id="csv-preview"></div>
+                                <div class="column-controls">
+                                    <label for="column-select">Response Column:</label>
+                                    <select id="column-select" class="form-control">
+                                        <option value="">-- Select Column --</option>
+                                    </select>
+                                    <button type="button" id="process-csv" class="btn btn-primary" disabled>Process Selected Column</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Upload Success -->
+                            <div class="upload-success" id="upload-success" style="display: none;">
+                                <div class="success-message">
+                                    <div class="success-icon">✅</div>
+                                    <h4 id="upload-filename">File uploaded successfully</h4>
+                                    <p id="upload-summary">Found X valid responses</p>
+                                </div>
+                                <form method="POST" action="{{ url_for('process_step') }}">
+                                    <input type="hidden" name="data_source" value="upload">
+                                    <input type="hidden" name="uploaded_file" id="uploaded-file-input" value="">
+                                    <button type="submit" class="btn btn-primary">Continue with Uploaded Data</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            {% elif step == 2 %}
+                <!-- Step 2: Score Description -->
+                <div class="step-container">
+                    <h2>Step 2: Describe Your Scoring Criteria</h2>
+                    
+                    <p>Describe what you want to score. <em>Tip: 1-3 sentences work well for generating relevant score classes.</em></p>
+                    
+                    <form method="POST" action="{{ url_for('process_step') }}">
+                        <div class="form-group">
+                            <label for="score_description">Scoring Description:</label>
+                            <textarea 
+                                id="score_description" 
+                                name="score_description" 
+                                rows="4" 
+                                placeholder="Example: I want to score customer satisfaction responses based on sentiment and specific mentions of product quality. High scores should go to very positive responses that mention specific positive aspects. Low scores should go to negative responses or complaints."
+                                required>{{ session.get('score_description', '') }}</textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Generate Score Classes</button>
+                    </form>
+                    
+                    <!-- Sample Responses Preview - moved to bottom -->
+                    {% if dev_mode %}
+                        {% if sample_responses %}
+                            <div class="sample-responses-preview">
+                                <p>Examples from the <strong>{{ selected_dataset_name }}</strong> dataset</p>
+                                
+                                <div class="sample-responses-box">
+                                    <!-- Initial 3 examples -->
+                                    {% for response in sample_responses[:3] %}
+                                        <div class="sample-response-item">
+                                            <div class="response-text">{{ response.text }}</div>
+                                        </div>
+                                    {% endfor %}
+                                    
+                                    <!-- Hidden additional examples (4-10) -->
+                                    {% if sample_responses|length > 3 %}
+                                        <div id="additional-examples" style="display: none;">
+                                            {% for response in sample_responses[3:10] %}
+                                                <div class="sample-response-item">
+                                                    <div class="response-text">{{ response.text }}</div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- See more link -->
+                                        <div class="see-more-container">
+                                            <a href="#" id="see-more-examples" class="see-more-link">Show more examples</a>
+                                            <a href="#" id="see-less-examples" class="see-less-link" style="display: none;">Show fewer examples</a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            {% elif step == 3 %}
+                <!-- Step 3: Class Generation -->
+                <div class="step-container">
+                    <h2>Step 3: Review and Edit Score Classes</h2>
+                    <p>Based on your score description, we've generated score classes. Review and customize them as needed:</p>
+                    <form method="POST" action="{{ url_for('process_step') }}">
+                        {% for key, class_info in classes.items() %}
+                            <div class="class-editor">
+                                <h4>{{ class_info.name }}</h4>
+                                <div class="form-row">
+                                    <div class="form-group form-group-half">
+                                        <label for="{{ key }}_name">Class Name:</label>
+                                        <input type="text" id="{{ key }}_name" name="{{ key }}_name" value="{{ class_info.name }}" required>
+                                    </div>
+                                    <div class="form-group form-group-half">
+                                        <label for="{{ key }}_score">Numeric Score:</label>
+                                        <input type="text" id="{{ key }}_score" name="{{ key }}_score" value="{{ class_info.score }}" placeholder="e.g., 100, 0">
+                                        <small class="form-help">100 for high, 0 for low, empty for non-scoring</small>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="{{ key }}_description">Description:</label>
+                                    <textarea id="{{ key }}_description" name="{{ key }}_description" rows="2" required>{{ class_info.description }}</textarea>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        <button type="submit" class="btn btn-primary">Generate Instructions</button>
+                    </form>
+                </div>
+
+            {% elif step == 4 and dev_mode %}
+                <!-- Step 4: Prompt Review (Dev Mode Only) -->
+                <div class="step-container">
+                    <h2>Step 4: Review and Edit Instructions</h2>
+                    <p>We've generated scoring instructions based on your criteria and score classes. Review and customize as needed:</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>Generated Instructions:</strong> This will not be shown to the customer. But is shown here for development / prototyping purposes.
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('process_step') }}">
+                        <div class="form-group">
+                            <label for="prompt">Scoring Instructions:</label>
+                            <textarea id="prompt" name="prompt" rows="15" required>{{ prompt }}</textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Run Inference</button>
+                    </form>
+                </div>
+
+            {% elif step == 5 %}
+                <!-- Step 5: Run Inference -->
+                <div class="step-container">
+                    <h2>Step 5: Batch Processing Survey Responses</h2>
+                    <p>Inferring scores on responses...</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>Batch Processing:</strong> All responses are processed together in one API call for faster results and better consistency.
+                    </div>
+                    
+                    <div id="progress-container">
+                        <div class="progress">
+                            <div class="progress-bar-inner" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        {% if dev_mode %}
+                            <p id="progress-text">Starting batch processing...</p>
+                        {% else %}
+                            <p id="progress-text">✅ Instructions Generated, now running score inference on data...</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <script>
+                // Auto-start inference when Step 5 loads
+                $(document).ready(function() {
+                    const isDevMode = {{ 'true' if dev_mode else 'false' }};
+                    const initialDelay = isDevMode ? 500 : 2500; // Dev: 500ms, Production: 2.5s
+
+                    // Trigger inference automatically with conditional delay
+                    setTimeout(function() {
+                        // Smooth transition to processing message
+                        $('#progress-text').fadeOut(300, function() {
+                            $(this).text('Initializing batch processing...').fadeIn(300);
+                        });
+                        
+                        let progress = 0;
+                        const progressBar = $('#progress-bar');
+                        const progressText = $('#progress-text');
+                        
+                        const updateProgress = () => {
+                            progress += Math.random() * 25;
+                            if (progress > 90) progress = 90;
+                            
+                            progressBar.css('width', progress + '%');
+                            progressText.text(`Batch processing all responses... ${Math.round(progress)}%`);
+                            
+                            if (progress < 90) {
+                                setTimeout(updateProgress, 200 + Math.random() * 300);
+                            }
+                        };
+                        
+                        updateProgress();
+                        
+                        // Actually start the batch inference
+                        $.ajax({
+                            url: '/run_inference',
+                            method: 'POST',
+                            success: function(response) {
+                                progressBar.css('width', '100%');
+                                progressText.text('Batch processing complete! ⚡');
+                                setTimeout(() => {
+                                    window.location.href = response.redirect || '/step/6';
+                                }, 800);
+                            },
+                            error: function(xhr, status, error) {
+                                progressText.text('Error occurred during batch processing: ' + error);
+                                progressText.css('color', '#e74c3c');
+                            }
+                        });
+                    }, initialDelay); // Conditional delay: dev=500ms, production=2500ms
+                });
+                </script>
+
+            {% elif step == 6 %}
+                <!-- Step 6: Feedback Collection -->
+                <div class="step-container">
+                    <h2>Step 6: Provide Feedback</h2>
+                    <p>Your corrections will be used to generate the final results:</p>
+                    
+                    <div class="feedback-container">
+                        {% if results %}
+                            <!-- Compact Review Interface - moved to top -->
+                            <div class="compact-review-section">
+                                <h3>Review AI Classifications ({{ results|length }} responses)</h3>
+                                <p>Check "Correct" if the AI classification is right, uncheck to provide correction:</p>
+                                
+                                <div class="review-list">
+                                    {% for result in results[:50] %}
+                                        <div class="review-item" data-index="{{ result.index }}">
+                                            <div class="review-row">
+                                                <div class="response-preview">
+                                                    <strong>#{{ result.index + 1 }}:</strong> {{ result.response_text }}
+                                                </div>
+                                                <div class="classification-display">
+                                                    <span class="ai-classification-tag">{{ result.ai_classification }}</span>
+                                                </div>
+                                                <div class="correction-controls">
+                                                    <label class="correct-checkbox">
+                                                        <input type="checkbox" class="is-correct" checked data-original="{{ result.ai_classification }}">
+                                                        <span class="checkmark">✓ Correct</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Hidden correction section, shown when unchecked -->
+                                            <div class="correction-section" style="display: none;">
+                                                <div class="correction-controls-expanded">
+                                                    <label>Correct classification:</label>
+                                                    <select class="classification-select">
+                                                        {% for ck, cv in classes.items() %}
+                                                            <option value="{{ cv.name }}" {{ 'selected' if cv.name == result.ai_classification else '' }}>
+                                                                {{ cv.name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <textarea class="feedback-text" placeholder="Optional: Why is this incorrect?" rows="2"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-danger">
+                                <strong>🚨 No Results Found:</strong> No inference results are available. This means:<br>
+                                • Step 5 (Run Inference) may not have completed successfully<br>
+                                • Session data may have been lost<br>
+                                • There may be an issue with the batch processing<br>
+                                <br>
+                                <strong>Session Debug:</strong><br>
+                                • session.get('inference_results'): {{ session.get('inference_results', 'Not found') }}<br>
+                                • session.get('classes'): {{ session.get('classes', 'Not found') }}<br>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button id="submit-feedback" class="btn btn-primary">Submit Feedback & View Final Results</button>
+                    
+                    <!-- Debug and Export Info - moved to bottom -->
+                    {% if dev_mode %}
+                        {% if results %}
+                            <div class="debug-section" style="margin-top: 40px;">
+                                {% if session.get('last_results_file') %}
+                                    <div class="alert alert-info">
+                                        <strong>💾 Results Exported:</strong> Inference results have been saved to <code>{{ session.last_results_file }}</code> for analysis and debugging.
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="debug-info" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 4px; font-family: monospace; font-size: 11px; border: 1px solid #dee2e6;">
+                                    <strong>🔍 Debug Info:</strong><br>
+                                    Results count: {{ results|length if results else 0 }}<br>
+                                    Classes count: {{ classes|length if classes else 0 }}<br>
+                                    
+                                    {% if classes %}
+                                        <strong>Expected Classes:</strong><br>
+                                        {% for key, class_info in classes.items() %}
+                                            &nbsp;&nbsp;• "{{ class_info.name }}"<br>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if results %}
+                                        <strong>AI Classifications Found:</strong><br>
+                                        {% set unique_classifications = [] %}
+                                        {% for result in results %}
+                                            {% if result.ai_classification not in unique_classifications %}
+                                                {% set _ = unique_classifications.append(result.ai_classification) %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% for classification in unique_classifications %}
+                                            &nbsp;&nbsp;• "{{ classification }}"<br>
+                                        {% endfor %}
+
+                                        <strong>Sample Responses:</strong><br>
+                                        {% for result in results[:2] %}
+                                            &nbsp;&nbsp;{{ loop.index }}. "{{ result.response_text[:50] }}..." → "{{ result.ai_classification }}"<br>
+                                        {% endfor %}
+                                    {% endif %}
+                                    
+                                    {% if session.get('last_results_file') %}
+                                        <strong>📁 Results file:</strong> {{ session.last_results_file.split('/')[-1] }}<br>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            {% elif step == 7 %}
+                <!-- Step 7: Final Results -->
+                <div class="step-container">
+                    <h2>Step 7: Final Results</h2>
+                    <p>Custom score optimization complete! Here are your final results:</p>
+                    
+                    <div class="results-summary">
+                        {% if final_results %}
+                            <h3>📊 Feedback Summary</h3>
+                            
+                            <!-- Calculate feedback statistics -->
+                            {% set total_examples = final_results|length %}
+                            {% set feedback_data = user_feedback.get('feedback', []) %}
+                            {% set changes_count = user_feedback.get('changes_count', 0) %}
+                            {% set correct_count = total_examples - changes_count %}
+                            
+                            <div class="feedback-summary">
+                                <div class="summary-highlight">
+                                    <strong>Your feedback indicates that {{ correct_count }} out of {{ total_examples }} examples have been inferred as the correct category.</strong>
+                                </div>
+                                
+                                <!-- Category breakdown -->
+                                <h4>📈 Category Breakdown:</h4>
+                                {% set ai_classification_counts = {} %}
+                                {% set corrected_counts = {} %}
+                                
+                                <!-- Count AI classifications -->
+                                {% for result in final_results %}
+                                    {% set ai_class = result.ai_classification %}
+                                    {% set _ = ai_classification_counts.update({ai_class: ai_classification_counts.get(ai_class, 0) + 1}) %}
+                                {% endfor %}
+                                
+                                <!-- Count corrections -->
+                                {% for correction in feedback_data %}
+                                    {% set new_class = correction.new_classification %}
+                                    {% set _ = corrected_counts.update({new_class: corrected_counts.get(new_class, 0) + 1}) %}
+                                {% endfor %}
+                                
+                                <div class="category-breakdown">
+                                    {% for class_key, class_info in classes.items() %}
+                                        {% set ai_count = ai_classification_counts.get(class_info.name, 0) %}
+                                        {% set corrections_from_this_category = feedback_data|selectattr('original_classification', 'equalto', class_info.name)|list|length %}
+                                        {% set corrections_to_this_category = feedback_data|selectattr('new_classification', 'equalto', class_info.name)|list|length %}
+                                        
+                                        <!-- True count = AI classified + corrections TO this category - corrections FROM this category -->
+                                        {% set true_count = ai_count + corrections_to_this_category - corrections_from_this_category %}
+                                        
+                                        <!-- Correctly inferred = AI classified correctly (not corrected away from this category) -->
+                                        {% set correctly_inferred = ai_count - corrections_from_this_category %}
+                                        
+                                        <div class="category-stat">
+                                            <span class="category-name">{{ class_info.name }}:</span>
+                                            <span class="category-details">
+                                                <strong>{{ correctly_inferred }} / {{ true_count }} correct</strong>
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Iteration Options -->
+                            {% if user_feedback.get('changes_count', 0) > 0 and iteration_count < 3 %}
+                                <div class="iteration-section">
+                                    <h3>🔄 Improve Your Results</h3>
+                                    <p>Based on your feedback, we can refine the scoring instructions to improve accuracy. 
+                                       {% if iteration_count > 0 %}This is iteration {{ iteration_count + 1 }} of 3.{% endif %}</p>
+                                    
+                                    {% if iteration_history %}
+                                        <div class="iteration-history">
+                                            <h4>Previous Iterations:</h4>
+                                            {% for hist in iteration_history %}
+                                                <div class="iteration-item">
+                                                    <strong>Iteration {{ hist.iteration }}:</strong> 
+                                                    {{ hist.rationale[:100] }}...
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="iteration-buttons">
+                                        <button id="iterate-prompt" class="btn btn-primary">🔄 Iterate on instructions</button>
+                                        <button id="finish-session" class="btn btn-secondary">✅ Finish Session</button>
+                                    </div>
+                                </div>
+                            {% elif iteration_count >= 3 %}
+                                <div class="iteration-limit-reached">
+                                    <h3>📊 Maximum Iterations Reached</h3>
+                                    <p>You've completed 3 iterations. The instructions have been refined based on your feedback.</p>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Prompt Display -->
+                            <div class="prompt-display">
+                                <h3>🎯 Scoring instructions Used</h3>
+                                <p>These is the final instructions that was used for classification:</p>
+                                <div class="prompt-text">
+                                    <pre>{{ prompt }}</pre>
+                                </div>
+                            </div>
+                            
+                            <div class="action-buttons">
+                                <a href="{{ url_for('index') }}" class="btn btn-secondary">Start New Session</a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <strong>No results available.</strong> Please complete the full workflow to see final results.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% elif step == 7.5 %}
+                <!-- Step 7.5: Prompt Iteration Analysis -->
+                <div class="step-container">
+                    <h2>Step 7.5: Instructions Analysis & Improvement</h2>
+                    <p>We've analyzed your feedback and generated an improved instructions. Review the changes below:</p>
+                    
+                    {% if iteration_data %}
+                        <!-- Feedback Analysis Summary -->
+                        <div class="feedback-analysis-summary">
+                            <h3>📊 Feedback Analysis</h3>
+                            {% set analysis = iteration_data.feedback_analysis %}
+                            <div class="analysis-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Corrections:</span>
+                                    <span class="stat-value">{{ analysis.total_corrections }}</span>
+                                </div>
+                                {% if analysis.common_errors %}
+                                    <div class="common-errors">
+                                        <h4>Most Common Issues:</h4>
+                                        {% for error in analysis.common_errors[:3] %}
+                                            <div class="error-pattern">
+                                                <strong>{{ error.pattern }}</strong> ({{ error.count }} times)
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Technical Strategy -->
+                        <div class="improvement-rationale">
+                            <h3>🔧 Technical Rationale</h3>
+                            <div class="rationale-text">
+                                {{ iteration_data.rationale }}
+                            </div>
+                        </div>
+                        
+                        <!-- Unified Diff Display -->
+                        <div class="prompt-diff-container">
+                            <h3>🔍 Detailed Changes</h3>
+                            
+                            <!-- Diff Statistics -->
+                            <div class="diff-stats">
+                                <div class="stat-badge">
+                                    <span class="stat-label">Similarity:</span>
+                                    <span class="stat-value">{{ iteration_data.diff_data.similarity_ratio }}%</span>
+                                </div>
+                                <div class="stat-badge">
+                                    <span class="stat-label">Changes:</span>
+                                    <span class="stat-value">{{ iteration_data.diff_data.changes_count }} sections</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Inline Diff View -->
+                            <div class="inline-diff-container">
+                                <h4>📝 Unified View with Highlights</h4>
+                                <div class="diff-legend">
+                                    <span class="legend-item">
+                                        <span class="diff-added">Green = Added</span>
+                                    </span>
+                                    <span class="legend-item">
+                                        <span class="diff-deleted">Red = Removed</span>  
+                                    </span>
+                                    <span class="legend-item">
+                                        Black = Unchanged
+                                    </span>
+                                </div>
+                                <div class="inline-diff-display">
+                                    {{ iteration_data.diff_data.inline_diff_html|safe }}
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="iteration-actions">
+                            <button id="approve-iteration" class="btn btn-primary">✅ Apply Changes & Continue</button>
+                            <button id="reject-iteration" class="btn btn-secondary">❌ Keep Original instructions</button>
+                        </div>
+                        
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <strong>No iteration data available.</strong> Returning to results...
+                        </div>
+                        <script>
+                            setTimeout(() => {
+                                window.location.href = "{{ url_for('show_step', step_num=7) }}";
+                            }, 3000);
+                        </script>
+                    {% endif %}
+                </div>
+                
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

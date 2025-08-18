@@ -1,0 +1,66 @@
+{
+  "title": "Product Review Analysis",
+  "description": "Customer reviews for a new smartphone product launch",
+  "responses": [
+    {
+      "id": 1,
+      "text": "This phone is incredible! The camera quality blows me away, battery lasts all day, and the performance is lightning fast. Worth every penny!"
+    },
+    {
+      "id": 2,
+      "text": "Disappointed with this purchase. The battery drains quickly, camera is mediocre in low light, and it overheats during gaming. Not worth the premium price."
+    },
+    {
+      "id": 3,
+      "text": "It's an adequate phone. Does basic functions well but nothing groundbreaking. Price point seems reasonable for the features offered."
+    },
+    {
+      "id": 4,
+      "text": "Absolutely fantastic device! The build quality is premium, software is intuitive, and customer support has been excellent. Highly recommend!"
+    },
+    {
+      "id": 5,
+      "text": "My neighbor's dog has been barking a lot lately. I think they got a new puppy and it's still adjusting to the new environment."
+    },
+    {
+      "id": 6,
+      "text": "Major quality issues. Screen cracked within the first week despite careful handling. The phone also has connectivity problems and frequent app crashes."
+    },
+    {
+      "id": 7,
+      "text": "Good overall experience. The phone meets my needs and the price was competitive. Some minor software bugs but nothing deal-breaking."
+    },
+    {
+      "id": 8,
+      "text": "Love the sleek design and vibrant display! The phone feels premium in hand and all the features work smoothly. Great upgrade from my old device."
+    },
+    {
+      "id": 9,
+      "text": "Mixed feelings about this phone. Great camera and display, but battery life is inconsistent and the charging port seems loose already."
+    },
+    {
+      "id": 10,
+      "text": "Exceptional phone in every aspect! Fast processing, amazing camera, long battery life, and elegant design. This company really outdid themselves."
+    },
+    {
+      "id": 11,
+      "text": "Poor value for money. The phone is overpriced for what it offers. Similar features available in cheaper alternatives from other brands."
+    },
+    {
+      "id": 12,
+      "text": "The phone has some nice features but also notable drawbacks. Good for basic use but power users might find limitations frustrating."
+    },
+    {
+      "id": 13,
+      "text": "Perfect phone! Exactly what I was looking for. Great performance, beautiful camera, and reliable battery. Couldn't be happier with this purchase."
+    },
+    {
+      "id": 14,
+      "text": "Planning to visit the museum this weekend. They have a new exhibition about ancient civilizations that looks really interesting."
+    },
+    {
+      "id": 15,
+      "text": "The phone works fine but the packaging was damaged during shipping. The actual device seems okay though, no visible damage."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "title": "Employee Engagement Survey",
+  "description": "Employee feedback about workplace satisfaction and company culture",
+  "responses": [
+    {
+      "id": 1,
+      "text": "I absolutely love working here! The team is supportive, management listens to our ideas, and there are great opportunities for growth. Best job I've ever had."
+    },
+    {
+      "id": 2,
+      "text": "The workload has become overwhelming lately. I'm working 60+ hour weeks and it's affecting my work-life balance. Management doesn't seem to care about employee wellbeing."
+    },
+    {
+      "id": 3,
+      "text": "It's an okay place to work. Pay is decent, benefits are standard. Nothing particularly exciting but nothing terrible either."
+    },
+    {
+      "id": 4,
+      "text": "Great company culture and values. I feel valued as an employee and the flexible work arrangements have been life-changing for my family situation."
+    },
+    {
+      "id": 5,
+      "text": "Thinking about getting a new car soon. Maybe something more fuel efficient since gas prices are so high these days."
+    },
+    {
+      "id": 6,
+      "text": "Poor communication from leadership. Decisions are made without consulting the team and we often find out about major changes through rumors rather than official channels."
+    },
+    {
+      "id": 7,
+      "text": "The salary is competitive and I enjoy most of my daily tasks. The office environment is pleasant and my colleagues are professional and helpful."
+    },
+    {
+      "id": 8,
+      "text": "Excellent benefits package and the company really invests in employee development. I've learned so much in my time here and feel prepared for advancement."
+    },
+    {
+      "id": 9,
+      "text": "Some aspects are good, others need improvement. The team dynamics are great but the technology we use is outdated and slows down productivity."
+    },
+    {
+      "id": 10,
+      "text": "This company has given me amazing opportunities to grow professionally. The mentorship program is outstanding and the leadership team is inspiring."
+    },
+    {
+      "id": 11,
+      "text": "Micromanagement is a serious issue here. I feel like I'm not trusted to do my job independently, which is frustrating and demotivating."
+    },
+    {
+      "id": 12,
+      "text": "The work environment has both positive and negative aspects. Good benefits but limited career advancement opportunities. Mixed experience overall."
+    },
+    {
+      "id": 13,
+      "text": "Outstanding workplace! Collaborative environment, fair compensation, and management that truly cares about employee success. Couldn't ask for more."
+    },
+    {
+      "id": 14,
+      "text": "Need to remember to pick up groceries after work today. The new recipe I want to try requires some ingredients I don't have at home."
+    },
+    {
+      "id": 15,
+      "text": "The coffee in the break room could be better quality. Also, the parking situation is challenging during busy periods."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "title": "Customer Satisfaction Survey",
+  "description": "Customer feedback about product experience and service quality",
+  "responses": [
+    {
+      "id": 1,
+      "text": "The product exceeded my expectations! The quality is outstanding and the customer service team was incredibly helpful when I had questions. I would definitely recommend this to friends and family."
+    },
+    {
+      "id": 2,
+      "text": "Not satisfied at all. The product broke after just one week of use. When I contacted support, they were rude and unhelpful. Waste of money."
+    },
+    {
+      "id": 3,
+      "text": "It's okay I guess. Does what it's supposed to do but nothing special. The price seems fair for what you get."
+    },
+    {
+      "id": 4,
+      "text": "Amazing experience from start to finish! Fast shipping, great packaging, and the product works perfectly. This company really knows how to take care of their customers."
+    },
+    {
+      "id": 5,
+      "text": "The weather has been really nice lately. I went for a walk in the park and saw some beautiful flowers blooming."
+    },
+    {
+      "id": 6,
+      "text": "Terrible quality control. The item arrived damaged and the replacement was also defective. Very disappointing experience overall."
+    },
+    {
+      "id": 7,
+      "text": "Good value for money. The features work as advertised and I haven't had any major issues. Would consider buying from this company again."
+    },
+    {
+      "id": 8,
+      "text": "I love the color and design! It matches perfectly with my home decor. The functionality is also great - very user-friendly interface."
+    },
+    {
+      "id": 9,
+      "text": "Hard to say if it's good or bad. Some features work well, others seem buggy. The customer service was responsive but couldn't fully resolve my issues."
+    },
+    {
+      "id": 10,
+      "text": "Outstanding product! Been using it for 6 months now without any problems. The build quality is solid and it's very reliable."
+    },
+    {
+      "id": 11,
+      "text": "Delivery was delayed and the product didn't match the description on the website. Requesting a refund."
+    },
+    {
+      "id": 12,
+      "text": "Mixed feelings about this purchase. The product itself is decent but the buying experience was frustrating due to website issues and unclear information."
+    },
+    {
+      "id": 13,
+      "text": "Perfect! Exactly what I was looking for. Great price, fast delivery, and excellent quality. Highly recommend!"
+    },
+    {
+      "id": 14,
+      "text": "My cat really likes the new food I bought. She's been eating it every day and seems healthier."
+    },
+    {
+      "id": 15,
+      "text": "The product is fine but the packaging was excessive and wasteful. Companies should be more environmentally conscious."
+    }
+  ]
+}
