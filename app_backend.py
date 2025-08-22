@@ -85,7 +85,7 @@ class ScorePromptBackend:
         return answer
 
     def load_survey_examples(self):
-        """Load pre-built survey examples"""
+        """Load pre-built survey examples, with special handling for conversation datasets"""
         examples = {}
         examples_dir = 'examples'
         if os.path.exists(examples_dir):
@@ -94,12 +94,28 @@ class ScorePromptBackend:
                     filepath = os.path.join(examples_dir, filename)
                     with open(filepath, 'r') as f:
                         data = json.load(f)
-                        name = filename.replace('.json', '').replace('_', ' ').title()
-                        examples[filename] = {
-                            'name': name,
-                            'data': data,
-                            'count': len(data.get('responses', []))
-                        }
+                        
+                        # Check if this is a conversation dataset (array format)
+                        if filename.startswith('conversation_') and isinstance(data, list):
+                            # Transform conversation array into standard format
+                            transformed_data = {
+                                'title': 'Customer Support Conversations',
+                                'description': 'Sample customer support conversation transcripts',
+                                'responses': [
+                                    {'id': i + 1, 'text': conversation} 
+                                    for i, conversation in enumerate(data)
+                                ]
+                            }
+                            data = transformed_data
+                        
+                        # Only include conversation datasets, skip others
+                        if filename.startswith('conversation_'):
+                            name = filename.replace('.json', '').replace('_', ' ').title()
+                            examples[filename] = {
+                                'name': name,
+                                'data': data,
+                                'count': len(data.get('responses', []))
+                            }
         return examples
 
     def generate_default_classes(self):
