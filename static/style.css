@@ -765,6 +765,7 @@ h1 {
     font-size: 14px;
     line-height: 1.5;
     color: #333;
+    white-space: pre-wrap;
 }
 
 .see-more-container {
