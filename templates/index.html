@@ -22,7 +22,7 @@
                     <div class="step {{ 'active' if i == step else 'completed' if i < step else '' }}">
                         <span class="step-number">{{ i }}</span>
                         <span class="step-name">
-                            {% if i == 2 %}Score Description
+                            {% if i == 2 %}Summary Description
                             {% elif i == 3 %}Generate Classes
                             {% elif i == 4 %}Review Prompt
                             {% elif i == 5 %}Run Inference
@@ -150,7 +150,7 @@
             {% elif step == 2 %}
                 <!-- Step 2: Summarization Description -->
                 <div class="step-container">
-                    <h2>Step 2: Describe Your Summarization Criteria</h2>
+                    <h2>Step 2: Summary Description</h2>
                     
                     <p>Describe what aspects you want to summarize from the conversations. <em>Tip: 2-3 sentences work well for generating relevant summary categories.</em></p>
                     
@@ -165,7 +165,7 @@
                                 required>{{ session.get('score_description', '') }}</textarea>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">Generate Summary Types</button>
+                        <button type="submit" class="btn btn-primary">Generate Summary Information</button>
                     </form>
                     
                     <!-- Sample Responses Preview - moved to bottom -->
