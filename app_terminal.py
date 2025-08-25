@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Terminal interface for Score Prompt Generation UX
+Terminal interface for Summary Prompt Generation UX
 Uses app_backend.py for all business logic
 """
 
@@ -9,7 +9,7 @@ import sys
 import json
 import time
 from typing import Dict, List, Any, Optional
-from app_backend import ScorePromptBackend, SessionManager
+from app_backend import SummaryPromptBackend, SessionManager
 
 
 def clear_screen():
@@ -83,19 +83,19 @@ def progress_bar(current: int, total: int, width: int = 50):
 
 
 class TerminalInterface:
-    """Terminal-based interface for the score prompt generation workflow"""
+    """Terminal-based interface for the summary prompt generation workflow"""
     
     def __init__(self):
-        self.backend = ScorePromptBackend(SessionManager())
+        self.backend = SummaryPromptBackend(SessionManager())
         self.current_step = 1
         self.workflow_data = {}
     
     def run(self):
         """Main entry point for the terminal interface"""
         clear_screen()
-        print_header("Score Prompt Generation - Terminal Interface")
-        print("\nWelcome to the 7-step workflow for generating and refining survey scoring prompts!")
-        print("This tool helps you create AI prompts for scoring survey responses consistently.")
+        print_header("Summary Prompt Generation - Terminal Interface")
+        print("\nWelcome to the 7-step workflow for generating and refining survey summary prompts!")
+        print("This tool helps you create AI prompts for summarizing survey responses consistently.")
         print("\nPress Enter to continue...")
         input()
         
@@ -105,7 +105,7 @@ class TerminalInterface:
                     if self.step_1_select_survey():
                         self.current_step = 2
                 elif self.current_step == 2:
-                    if self.step_2_score_description():
+                    if self.step_2_summary_description():
                         self.current_step = 3
                 elif self.current_step == 3:
                     if self.step_3_generate_classes():
@@ -367,10 +367,10 @@ class TerminalInterface:
                 print("Please check your file format and try again.")
                 continue
     
-    def step_2_score_description(self) -> bool:
-        """Step 2: Score Description"""
+    def step_2_summary_description(self) -> bool:
+        """Step 2: Summary Description"""
         clear_screen()
-        print_header("Describe Scoring Criteria", 2)
+        print_header("Describe Summarization Criteria", 2)
         
         # Show dataset info
         survey_data = self.workflow_data.get('survey_data', {})
@@ -389,39 +389,39 @@ class TerminalInterface:
                 print(f"{i}. {text}")
             print_separator()
         
-        print("\nNow describe what you want to score in these survey responses.")
+        print("\nNow describe what you want to summarize in these survey responses.")
         print("For example:")
-        print("- 'I want to score customer satisfaction based on sentiment and product quality mentions'")
-        print("- 'Score responses based on likelihood to recommend the product to others'")
+        print("- 'I want to summarize customer satisfaction themes and sentiment patterns'")
+        print("- 'Summarize responses focusing on product feedback and recommendation likelihood'")
         print("- 'Rate the responses based on technical knowledge and helpfulness'")
         
         while True:
-            print("\nEnter your scoring description (2-3 sentences work best):")
-            score_description = input("> ").strip()
+            print("\nEnter your summarization description (2-3 sentences work best):")
+            summary_description = input("> ").strip()
             
-            if not score_description:
-                print("Please provide a scoring description.")
+            if not summary_description:
+                print("Please provide a summarization description.")
                 continue
             
-            if len(score_description) < 10:
+            if len(summary_description) < 10:
                 print("Please provide a more detailed description (at least 10 characters).")
                 continue
             
             # Confirm the description
-            print(f"\nYour scoring criteria:")
-            print(f"'{score_description}'")
+            print(f"\nYour summarization criteria:")
+            print(f"'{summary_description}'")
             confirm = input("\nIs this correct? (y/n/edit): ").strip().lower()
             
             if confirm == 'y':
                 # Save to workflow data and backend
-                self.workflow_data['score_description'] = score_description
-                self.backend.session.set('score_description', score_description)
+                self.workflow_data['summary_description'] = summary_description
+                self.backend.session.set('summary_description', summary_description)
                 
                 print("\n⏳ Generating contextually relevant classification categories...")
                 
-                # Generate smart classes based on the score description
+                # Generate smart summary types based on the summary description
                 try:
-                    classes = self.backend.generate_smart_classes(score_description)
+                    classes = self.backend.generate_smart_summary_types(summary_description)
                     self.workflow_data['classes'] = classes
                     self.backend.save_consolidated_session_data('classes', classes)
                     
@@ -459,7 +459,7 @@ class TerminalInterface:
         print("AI has generated the following classification categories based on your scoring criteria:")
         print_separator()
         
-        class_order = ['high_score', 'low_score', 'not_relevant', 'unclear']
+        class_order = ['key_themes', 'sentiment_overview', 'not_relevant', 'unclear']
         for key in class_order:
             if key in classes:
                 class_info = classes[key]
@@ -475,35 +475,31 @@ class TerminalInterface:
             
             if choice == 'c':
                 # Generate initial prompt
-                score_description = self.workflow_data.get('score_description', '')
-                print("\n⏳ Generating expert scoring prompt...")
+                summary_description = self.workflow_data.get('summary_description', '')
+                print("\n⏳ Generating expert summarization prompt...")
                 
                 try:
-                    initial_prompt = self.backend.generate_initial_prompt(score_description, classes)
+                    initial_prompt = self.backend.generate_initial_summary_prompt(summary_description, self.workflow_data['classes'])
                     self.workflow_data['initial_prompt'] = initial_prompt
                     self.backend.save_consolidated_session_data('initial_prompt', initial_prompt)
                     
-                    print("✅ Expert prompt generated successfully!")
-                    input("Press Enter to continue to Step 4...")
                     return True
-                    
                 except Exception as e:
                     print(f"Error generating prompt: {e}")
-                    print("Using template-based prompt instead.")
-                    initial_prompt = self.backend.generate_template_prompt(score_description, classes)
+                    initial_prompt = self.backend.generate_template_summary_prompt(summary_description, self.workflow_data['classes'])
                     self.workflow_data['initial_prompt'] = initial_prompt
                     self.backend.save_consolidated_session_data('initial_prompt', initial_prompt)
-                    input("Press Enter to continue to Step 4...")
+                    
                     return True
                     
             elif choice == 'e':
                 if self._edit_classes():
                     # Regenerate prompt with edited classes
-                    score_description = self.workflow_data.get('score_description', '')
+                    summary_description = self.workflow_data.get('summary_description', '')
                     print("\n⏳ Regenerating prompt with updated categories...")
                     
                     try:
-                        initial_prompt = self.backend.generate_initial_prompt(score_description, self.workflow_data['classes'])
+                        initial_prompt = self.backend.generate_initial_summary_prompt(summary_description, self.workflow_data['classes'])
                         self.workflow_data['initial_prompt'] = initial_prompt
                         self.backend.save_consolidated_session_data('initial_prompt', initial_prompt)
                         
@@ -513,7 +509,7 @@ class TerminalInterface:
                         
                     except Exception as e:
                         print(f"Error regenerating prompt: {e}")
-                        initial_prompt = self.backend.generate_template_prompt(score_description, self.workflow_data['classes'])
+                        initial_prompt = self.backend.generate_template_summary_prompt(summary_description, self.workflow_data['classes'])
                         self.workflow_data['initial_prompt'] = initial_prompt
                         self.backend.save_consolidated_session_data('initial_prompt', initial_prompt)
                         input("Press Enter to continue to Step 4...")
@@ -528,7 +524,7 @@ class TerminalInterface:
     def _edit_classes(self) -> bool:
         """Edit classification classes"""
         classes = self.workflow_data.get('classes', {}).copy()
-        class_order = ['high_score', 'low_score', 'not_relevant', 'unclear']
+        class_order = ['key_themes', 'sentiment_overview', 'not_relevant', 'unclear']
         
         print("\n" + "="*60)
         print("EDITING CLASSIFICATION CATEGORIES")
@@ -956,7 +952,7 @@ class TerminalInterface:
             results = self.workflow_data.get('results', [])
             classes = self.workflow_data.get('classes', {})
             original_prompt = self.workflow_data.get('initial_prompt', '')
-            score_description = self.workflow_data.get('score_description', '')
+            summary_description = self.workflow_data.get('summary_description', '')
             
             # Analyze feedback patterns
             feedback_analysis = self.backend.analyze_feedback_patterns(user_feedback, results, classes)
@@ -973,7 +969,7 @@ class TerminalInterface:
             print("\n⏳ Generating improved prompt...")
             
             improved_prompt, rationale = self.backend.generate_refined_prompt(
-                original_prompt, feedback_analysis, classes, score_description
+                original_prompt, feedback_analysis, classes, summary_description
             )
             
             print("✅ Improved prompt generated!")

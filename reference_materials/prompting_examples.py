@@ -7,20 +7,20 @@ def make_inference_prompt(instructions, responses):
 Responses = {json.dumps(responses_json, indent=4)}
 
 Do not return any explanation or pre-amble.
-Only return the scores in the format specified.
+Only return the summaries in the format specified.
 
-Return scores in this format:
+Return summaries in this format:
 {{
-    "0": <score category>,
-    "1": <score category>,
+    "0": <summary type>,
+    "1": <summary type>,
     ...
-    "n": <score category>
+    "n": <summary type>
 }}
 """
     return prompt
 
 
-def get_score_json(response):
+def get_summary_json(response):
     response = response.replace("```json", "").replace("```", "").strip()
-    score_json = json.loads(response)
-    return score_json
+    summary_json = json.loads(response)
+    return summary_json

@@ -47,8 +47,8 @@ class SessionManager:
                         print(f"DEBUG: Failed to clean up {filename}: {e}")
 
 
-class ScorePromptBackend:
-    """Core business logic for score prompt generation"""
+class SummaryPromptBackend:
+    """Core business logic for summary prompt generation"""
     
     def __init__(self, session_manager=None):
         self.session = session_manager or SessionManager()
@@ -325,26 +325,26 @@ For each conversation provided, create a structured summary that:
 
 When processing multiple conversations, ensure consistency in your approach and format."""
 
-    def generate_initial_prompt(self, score_description, classes):
-        """Generate an intelligent scoring prompt using LLM based on description and classes"""
+    def generate_initial_summary_prompt(self, summary_description, summary_types):
+        """Generate an intelligent summarization prompt using LLM based on description and summary types"""
         
         # Prepare class information for the prompt generation
         class_details = []
         class_names = []
-        for key, class_info in classes.items():
+        for key, class_info in summary_types.items():
             class_details.append(f"- {class_info['name']}: {class_info['description']}")
             class_names.append(class_info['name'])
         
-        prompt_generation_request = f"""Create an expert-level prompt for batch scoring of survey responses. The prompt will be used to classify multiple survey responses simultaneously in a single API call.
+        prompt_generation_request = f"""Create an expert-level prompt for batch summarization of survey responses. The prompt will be used to summarize multiple survey responses simultaneously in a single API call.
 
-SCORING CRITERIA:
-{score_description}
+    SUMMARIZATION CRITERIA:
+    {summary_description}
 
 CLASSIFICATION CATEGORIES:
 {chr(10).join(class_details)}
 
 Please generate a professional prompt that:
-1. Clearly explains the scoring task and criteria
+1. Clearly explains the summarization task and criteria
 2. Provides detailed guidance on how to classify responses consistently across a batch
 3. Includes specific instructions for edge cases or ambiguous responses
 4. Emphasizes consistency when processing multiple responses together
@@ -372,12 +372,12 @@ Generate the complete prompt now:"""
         except Exception as e:
             print(f"Error generating intelligent prompt: {e}")
             # Fallback to template-based approach
-            return self.generate_template_prompt(score_description, classes)
+            return self.generate_template_summary_prompt(summary_description, summary_types)
 
-    def generate_template_prompt(self, score_description, classes):
+    def generate_template_summary_prompt(self, summary_description, summary_types):
         """Fallback template-based prompt generation"""
         class_descriptions = []
-        for key, class_info in classes.items():
+        for key, class_info in summary_types.items():
             class_descriptions.append(f"- {class_info['name']}: {class_info['description']}")
         
         prompt = f"""You are tasked with scoring survey responses based on the following criteria:
@@ -771,7 +771,7 @@ Return scores in this format:
             print(f"Error analyzing feedback: {e}")
             return None
 
-    def generate_refined_prompt(self, original_prompt, feedback_analysis, classes, score_description):
+    def generate_refined_prompt(self, original_prompt, feedback_analysis, classes, summary_description):
         """Generate an improved prompt based on feedback analysis"""
         try:
             if not feedback_analysis or not feedback_analysis.get('misclassification_patterns'):
@@ -813,8 +813,8 @@ Return scores in this format:
 CURRENT PROMPT:
 {original_prompt}
 
-ORIGINAL SCORING CRITERIA:
-{score_description}
+        ORIGINAL SUMMARIZATION CRITERIA:
+        {summary_description}
 
 CLASSIFICATION CATEGORIES:
 {chr(10).join(class_details)}
@@ -1110,8 +1110,8 @@ Use simple, readable formatting with em dashes (—) for bullets. Focus on the t
         })
         
         # Update score description from session
-        if 'score_description' in self.session.data:
-            session_obj['scoring_criteria']['score_description'] = self.session.data['score_description']
+        if 'summary_description' in self.session.data:
+            session_obj['scoring_criteria']['summary_description'] = self.session.data['summary_description']
         
         self.save_consolidated_session(session_obj)
 

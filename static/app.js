@@ -1,4 +1,4 @@
-// JavaScript for Custom Score Creation Tool
+// JavaScript for Custom Summary Creation Tool
 
 $(document).ready(function() {
     
@@ -398,13 +398,13 @@ $(document).ready(function() {
             const submitButton = form.find('button[type="submit"]');
             
             submitButton.prop('disabled', true)
-                       .text('Generating Score Categories...')
+                       .text('Generating Summary Types...')
                        .addClass('generating');
         } else if (currentStep === '3') {
             const submitButton = form.find('button[type="submit"]');
             
             submitButton.prop('disabled', true)
-                       .text('Generating Score Prompt...')
+                       .text('Generating Summary Prompt...')
                        .addClass('generating');
         }
         
@@ -455,7 +455,7 @@ $(document).ready(function() {
                 const response = xhr.responseJSON || {};
                 alert(response.message || 'Failed to start iteration. Please try again.');
                 button.prop('disabled', false)
-                      .text('🔄 Iterate on Scoring Instructions')
+                      .text('🔄 Iterate on Summarization Instructions')
                       .removeClass('btn-processing');
                 processingIndicator.remove();
             }

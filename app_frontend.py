@@ -1,5 +1,5 @@
 """
-Flask frontend for Score Prompt Generation UX
+Flask frontend for Summary Prompt Generation UX
 Uses app_backend.py for all business logic - clean separation of concerns
 """
 
@@ -8,7 +8,7 @@ import datetime
 import uuid
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
-from app_backend import ScorePromptBackend, SessionManager
+from app_backend import SummaryPromptBackend, SessionManager
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
@@ -36,7 +36,7 @@ def get_backend():
         if key != 'session_id':  # Don't sync the session_id itself
             session_manager.set(key, value)
     
-    return ScorePromptBackend(session_manager)
+    return SummaryPromptBackend(session_manager)
 
 def sync_session_data(backend):
     """Sync backend session data back to Flask session"""
@@ -361,7 +361,7 @@ def process_step():
             return redirect(url_for('show_step', step_num=1))
     
     elif current_step == 2:
-        summary_description = request.form.get('score_description', '').strip()
+        summary_description = request.form.get('summary_description', '').strip()
         if summary_description:
             session['summary_description'] = summary_description
             backend.session.set('summary_description', summary_description)
@@ -514,7 +514,7 @@ def iterate_prompt():
         results = backend.load_results_from_file()
         classes = backend.get_consolidated_session_data('classes') or {}
         original_prompt = backend.get_consolidated_session_data('initial_prompt') or ''
-        score_description = session.get('score_description', '')
+        summary_description = session.get('summary_description', '')
         
         if not user_feedback.get('feedback'):
             return jsonify({'status': 'error', 'message': 'No feedback data available for iteration'}), 400
@@ -529,7 +529,7 @@ def iterate_prompt():
         # Generate refined prompt using backend
         print("DEBUG: Generating refined prompt...")
         improved_prompt, rationale = backend.generate_refined_prompt(
-            original_prompt, feedback_analysis, classes, score_description
+            original_prompt, feedback_analysis, classes, summary_description
         )
         
         # Create intelligent diff with semantic summary using backend

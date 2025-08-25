@@ -156,13 +156,13 @@
                     
                     <form method="POST" action="{{ url_for('process_step') }}">
                         <div class="form-group">
-                            <label for="score_description">Summarization Description:</label>
+                            <label for="summary_description">Summarization Description:</label>
                             <textarea 
-                                id="score_description" 
-                                name="score_description" 
+                                id="summary_description"
+                                name="summary_description" 
                                 rows="4" 
                                 placeholder="Example: I want to create summaries focusing on customer satisfaction themes, sentiment patterns, and specific product or service feedback from these support conversations."
-                                required>{{ session.get('score_description', '') }}</textarea>
+                                required>{{ session.get('summary_description', '') }}</textarea>
                         </div>
                         
                         <button type="submit" class="btn btn-primary">Generate Summary Information</button>
@@ -229,7 +229,7 @@
                 <!-- Step 4: Prompt Review (Dev Mode Only) -->
                 <div class="step-container">
                     <h2>Step 4: Review and Edit Instructions</h2>
-                    <p>We've generated scoring instructions based on your criteria and score classes. Review and customize as needed:</p>
+                    <p>We've generated summarization instructions based on your criteria and summary types. Review and customize as needed:</p>
                     
                     <div class="alert alert-info">
                         <strong>Generated Instructions:</strong> This will not be shown to the customer. But is shown here for development / prototyping purposes.
@@ -237,7 +237,7 @@
                     
                     <form method="POST" action="{{ url_for('process_step') }}">
                         <div class="form-group">
-                            <label for="prompt">Scoring Instructions:</label>
+                            <label for="prompt">Summarization Instructions:</label>
                             <textarea id="prompt" name="prompt" rows="15" required>{{ prompt }}</textarea>
                         </div>
                         
@@ -249,7 +249,7 @@
                 <!-- Step 5: Run Inference -->
                 <div class="step-container">
                     <h2>Step 5: Batch Processing Survey Responses</h2>
-                    <p>Inferring scores on responses...</p>
+                    <p>Generating summaries for responses...</p>
                     
                     <div class="alert alert-info">
                         <strong>Batch Processing:</strong> All responses are processed together in one API call for faster results and better consistency.
@@ -262,7 +262,7 @@
                         {% if dev_mode %}
                             <p id="progress-text">Starting batch processing...</p>
                         {% else %}
-                            <p id="progress-text">✅ Instructions Generated, now running score inference on data...</p>
+                            <p id="progress-text">✅ Instructions Generated, now running summary generation on data...</p>
                         {% endif %}
                     </div>
                 </div>
@@ -436,7 +436,7 @@
                 <!-- Step 7: Final Results -->
                 <div class="step-container">
                     <h2>Step 7: Final Results</h2>
-                    <p>Custom score optimization complete! Here are your final results:</p>
+                    <p>Custom summary optimization complete! Here are your final results:</p>
                     
                     <div class="results-summary">
                         {% if final_results %}
@@ -496,7 +496,7 @@
                             {% if user_feedback.get('changes_count', 0) > 0 and iteration_count < 3 %}
                                 <div class="iteration-section">
                                     <h3>🔄 Improve Your Results</h3>
-                                    <p>Based on your feedback, we can refine the scoring instructions to improve accuracy. 
+                                    <p>Based on your feedback, we can refine the summarization instructions to improve accuracy. 
                                        {% if iteration_count > 0 %}This is iteration {{ iteration_count + 1 }} of 3.{% endif %}</p>
                                     
                                     {% if iteration_history %}
@@ -525,7 +525,7 @@
                             
                             <!-- Prompt Display -->
                             <div class="prompt-display">
-                                <h3>🎯 Scoring instructions Used</h3>
+                                <h3>🎯 Summarization Instructions Used</h3>
                                 <p>These is the final instructions that was used for classification:</p>
                                 <div class="prompt-text">
                                     <pre>{{ prompt }}</pre>
