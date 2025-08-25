@@ -130,8 +130,8 @@ def show_step(step_num):
                              sample_responses=sample_responses, 
                              selected_dataset_name=selected_dataset_name))
     elif step_num == 3:
-        classes = backend.get_consolidated_session_data('classes') or backend.generate_default_classes()
-        return render_template('index.html', **get_template_context(step=3, classes=classes))
+        summary_instructions = backend.get_consolidated_session_data('summary_instructions') or ''
+        return render_template('index.html', **get_template_context(step=3, summary_instructions=summary_instructions))
     elif step_num == 4:
         prompt = backend.get_consolidated_session_data('initial_prompt') or ''
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
@@ -361,35 +361,29 @@ def process_step():
             return redirect(url_for('show_step', step_num=1))
     
     elif current_step == 2:
-        score_description = request.form.get('score_description', '').strip()
-        if score_description:
-            session['score_description'] = score_description
-            backend.session.set('score_description', score_description)
+        summary_description = request.form.get('score_description', '').strip()
+        if summary_description:
+            session['summary_description'] = summary_description
+            backend.session.set('summary_description', summary_description)
             
-            # Generate smart classes based on the score description using backend
-            classes = backend.generate_smart_classes(score_description)
-            backend.save_consolidated_session_data('classes', classes)
+            # Generate detailed summary instructions based on the description
+            summary_instructions = backend.generate_summary_instructions(summary_description)
+            backend.save_consolidated_session_data('summary_instructions', summary_instructions)
             sync_session_data(backend)
             return redirect(url_for('show_step', step_num=3))
         else:
-            flash('Please provide a description of the scoring criteria')
+            flash('Please provide a description of the summarization criteria')
             return redirect(url_for('show_step', step_num=2))
     
     elif current_step == 3:
-        classes = {}
-        for key in ['high_score', 'low_score', 'not_relevant', 'unclear']:
-            name = request.form.get(f'{key}_name', '').strip()
-            description = request.form.get(f'{key}_description', '').strip()
-            score = request.form.get(f'{key}_score', '').strip()
-            if name and description:
-                classes[key] = {'name': name, 'description': description, 'score': score}
-        
-        if len(classes) == 4:
-            backend.save_consolidated_session_data('classes', classes)
+        edited_instructions = request.form.get('summary_instructions', '').strip()
+        if edited_instructions:
+            # Save the edited summary instructions
+            backend.save_consolidated_session_data('summary_instructions', edited_instructions)
             
-            # Generate initial prompt using backend
-            score_description = session.get('score_description', '')
-            initial_prompt = backend.generate_initial_prompt(score_description, classes)
+            # Generate initial prompt using the summary instructions
+            summary_description = session.get('summary_description', '')
+            initial_prompt = backend.generate_initial_prompt_for_summarization(summary_description, edited_instructions)
             backend.save_consolidated_session_data('initial_prompt', initial_prompt)
             sync_session_data(backend)
             
@@ -399,7 +393,7 @@ def process_step():
             else:
                 return redirect(url_for('show_step', step_num=5))
         else:
-            flash('Please fill in all class names and descriptions')
+            flash('Please review and confirm the summary instructions')
             return redirect(url_for('show_step', step_num=3))
     
     elif current_step == 4:

@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Starting: Custom Score Creation Tool..."
+echo "Starting: Custom Summary Creation Tool..."
 echo "Development mode: $DEV_MODE"
 
 # Export dev_mode as environment variable

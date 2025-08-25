@@ -1,6 +1,5 @@
 """
-Backend logic for Score Prompt Generation UX
-Extracted from app.py to be framework-agnostic
+Backend logic for Summary Instructions Generator UX
 """
 
 import json
@@ -214,6 +213,117 @@ Generate categories that are specifically tailored to the scoring criteria provi
         except Exception as e:
             print(f"Error generating smart classes: {e}")
             return self.generate_default_classes()
+
+    def generate_summary_instructions(self, summary_description):
+        """Generate detailed summarization instructions using LLM based on summary description"""
+        
+        instruction_generation_prompt = f"""Based on the following summarization description, generate detailed, clear instructions for how to summarize conversations that meet this description.
+
+SUMMARIZATION DESCRIPTION:
+{summary_description}
+
+Please create clear and concise instructions that are no longer than a 5 sentence paragraph. Only include the vital parts, do not be concerned that you are missing any details."""
+
+        try:
+            llm_response = self.generate_response(instruction_generation_prompt)
+            
+            # Clean up the response - remove any JSON formatting if present, just return the text
+            instructions = llm_response.strip()
+            
+            # Basic validation that we got substantive instructions
+            if len(instructions) < 50:
+                print("Generated instructions too short, using default")
+                return self.generate_default_summary_instructions(summary_description)
+                
+            return instructions
+            
+        except Exception as e:
+            print(f"Error generating summary instructions: {e}")
+            return self.generate_default_summary_instructions(summary_description)
+    
+    def generate_default_summary_instructions(self, summary_description):
+        """Generate default summarization instructions as fallback"""
+        return f"""## Summary Instructions
+
+Based on your description: "{summary_description}"
+
+**Focus Areas:**
+- Extract main topics and themes from conversations
+- Identify key issues, concerns, or requests raised
+- Note resolution status and outcomes where applicable
+
+**Key Information to Capture:**
+- Primary purpose of each conversation
+- Main participant roles (agent, customer, etc.)
+- Critical decisions or actions taken
+- Any follow-up items or next steps
+
+**Structure Guidelines:**
+- Start with brief overview of conversation purpose
+- Group related points together logically
+- Use bullet points for clarity
+- Keep summaries concise but comprehensive
+
+**Quality Standards:**
+- Ensure accuracy to original conversation content
+- Maintain neutral, professional tone
+- Include enough detail for someone to understand the conversation without reading the full transcript
+- Highlight any urgent or high-priority items"""
+
+    def generate_initial_prompt_for_summarization(self, summary_description, summary_instructions):
+        """Generate initial prompt for conversation summarization using the detailed instructions"""
+        
+        prompt_generation_request = f"""Create a comprehensive prompt for an AI to summarize conversations based on the following criteria and instructions.
+
+ORIGINAL SUMMARY DESCRIPTION:
+{summary_description}
+
+DETAILED SUMMARY INSTRUCTIONS:
+{summary_instructions}
+
+Please create a prompt that:
+1. Clearly explains the summarization task
+2. Incorporates the detailed instructions provided
+3. Ensures consistent, high-quality summaries
+4. Handles edge cases (unclear conversations, off-topic content, etc.)
+5. Specifies the desired output format
+
+The prompt should be professional, clear, and designed for batch processing of multiple conversations."""
+
+        try:
+            llm_response = self.generate_response(prompt_generation_request)
+            
+            # Clean up the response
+            prompt = llm_response.strip()
+            
+            # Basic validation
+            if len(prompt) < 100:
+                print("Generated prompt too short, using default")
+                return self.generate_default_summarization_prompt(summary_description, summary_instructions)
+                
+            return prompt
+            
+        except Exception as e:
+            print(f"Error generating summarization prompt: {e}")
+            return self.generate_default_summarization_prompt(summary_description, summary_instructions)
+    
+    def generate_default_summarization_prompt(self, summary_description, summary_instructions):
+        """Generate default summarization prompt as fallback"""
+        return f"""You are an expert at summarizing conversations. Your task is to create comprehensive summaries based on the following criteria:
+
+SUMMARY CRITERIA:
+{summary_description}
+
+DETAILED INSTRUCTIONS:
+{summary_instructions}
+
+For each conversation provided, create a structured summary that:
+- Captures the main points and key information as specified in the instructions above
+- Maintains accuracy to the original conversation
+- Uses clear, professional language
+- Follows the structure and focus areas outlined in the instructions
+
+When processing multiple conversations, ensure consistency in your approach and format."""
 
     def generate_initial_prompt(self, score_description, classes):
         """Generate an intelligent scoring prompt using LLM based on description and classes"""

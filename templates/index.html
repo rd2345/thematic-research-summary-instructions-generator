@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Score Creation Tool</title>
+    <title>Custom Summary Creation Tool</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Custom Score Creation Tool</h1>
+        <h1>Custom Summary Creation Tool</h1>
         
         <!-- Progress Bar -->
         <div class="progress-bar">
@@ -23,7 +23,7 @@
                         <span class="step-number">{{ i }}</span>
                         <span class="step-name">
                             {% if i == 2 %}Summary Description
-                            {% elif i == 3 %}Generate Classes
+                            {% elif i == 3 %}Review Instructions
                             {% elif i == 4 %}Review Prompt
                             {% elif i == 5 %}Run Inference
                             {% elif i == 6 %}Provide Feedback
@@ -205,33 +205,23 @@
                 </div>
 
             {% elif step == 3 %}
-                <!-- Step 3: Class Generation -->
+                <!-- Step 3: Summary Instructions Review -->
                 <div class="step-container">
-                    <h2>Step 3: Review and Edit Score Classes</h2>
-                    <p>Based on your score description, we've generated score classes. Review and customize them as needed:</p>
+                    <h2>Step 3: Review Summary Instructions</h2>
+                    <p>We've generated detailed instructions for summarizing conversations based on your criteria. Review and customize them as needed:</p>
+                    
                     <form method="POST" action="{{ url_for('process_step') }}">
-                        {% for key, class_info in classes.items() %}
-                            <div class="class-editor">
-                                <h4>{{ class_info.name }}</h4>
-                                <div class="form-row">
-                                    <div class="form-group form-group-half">
-                                        <label for="{{ key }}_name">Class Name:</label>
-                                        <input type="text" id="{{ key }}_name" name="{{ key }}_name" value="{{ class_info.name }}" required>
-                                    </div>
-                                    <div class="form-group form-group-half">
-                                        <label for="{{ key }}_score">Numeric Score:</label>
-                                        <input type="text" id="{{ key }}_score" name="{{ key }}_score" value="{{ class_info.score }}" placeholder="e.g., 100, 0">
-                                        <small class="form-help">100 for high, 0 for low, empty for non-scoring</small>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="{{ key }}_description">Description:</label>
-                                    <textarea id="{{ key }}_description" name="{{ key }}_description" rows="2" required>{{ class_info.description }}</textarea>
-                                </div>
-                            </div>
-                        {% endfor %}
+                        <div class="form-group">
+                            <label for="summary_instructions">Summary Instructions:</label>
+                            <textarea 
+                                id="summary_instructions" 
+                                name="summary_instructions" 
+                                rows="15" 
+                                placeholder="Detailed instructions for how to summarize the conversations..."
+                                required>{{ summary_instructions }}</textarea>
+                        </div>
                         
-                        <button type="submit" class="btn btn-primary">Generate Instructions</button>
+                        <button type="submit" class="btn btn-primary">Continue with Instructions</button>
                     </form>
                 </div>
 
