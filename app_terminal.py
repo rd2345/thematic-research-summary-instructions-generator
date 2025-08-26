@@ -432,9 +432,9 @@ class TerminalInterface:
                 except Exception as e:
                     print(f"Error generating classes: {e}")
                     print("Using default classes instead.")
-                    classes = self.backend.generate_default_classes()
-                    self.workflow_data['classes'] = classes
-                    self.backend.save_consolidated_session_data('classes', classes)
+                    # classes = self.backend.generate_default_classes()
+                    # self.workflow_data['classes'] = classes
+                    # self.backend.save_consolidated_session_data('classes', classes)
                     input("Press Enter to continue to Step 3...")
                     return True
             

@@ -126,9 +126,12 @@ def show_step(step_num):
             print(f"DEBUG Step 2: First response preview: {responses[0].get('text', '')[:100]}...")
         print(f"DEBUG Step 2: Selected example in session: {session.get('selected_example', 'NOT_SET')}")
         
+        data_source_analysis = backend.get_consolidated_session_data('data_source_analysis') or {}
+        
         return render_template('index.html', **get_template_context(step=2, 
                              sample_responses=sample_responses, 
-                             selected_dataset_name=selected_dataset_name))
+                             selected_dataset_name=selected_dataset_name,
+                             data_source_analysis=data_source_analysis))
     elif step_num == 3:
         summary_instructions = backend.get_consolidated_session_data('summary_instructions') or ''
         return render_template('index.html', **get_template_context(step=3, summary_instructions=summary_instructions))
@@ -199,6 +202,16 @@ def upload_data():
                     'responses': responses
                 }
                 backend.save_consolidated_session_data('survey_data', upload_data)
+                
+                # Analyze the uploaded data source
+                try:
+                    data_analysis = backend.analyze_data_source(upload_data)
+                    backend.save_consolidated_session_data('data_source_analysis', data_analysis)
+                except Exception as e:
+                    print(f"Upload data analysis failed: {e}, using default")
+                    default_analysis = backend.get_default_data_source_analysis()
+                    backend.save_consolidated_session_data('data_source_analysis', default_analysis)
+                
                 session['selected_example'] = f'uploaded_{filename}'
                 sync_session_data(backend)
                 
@@ -276,6 +289,16 @@ def process_csv():
             'responses': responses
         }
         backend.save_consolidated_session_data('survey_data', upload_data)
+        
+        # Analyze the uploaded data source
+        try:
+            data_analysis = backend.analyze_data_source(upload_data)
+            backend.save_consolidated_session_data('data_source_analysis', data_analysis)
+        except Exception as e:
+            print(f"CSV data analysis failed: {e}, using default")
+            default_analysis = backend.get_default_data_source_analysis()
+            backend.save_consolidated_session_data('data_source_analysis', default_analysis)
+        
         session['selected_example'] = f'uploaded_{original_filename}'
         sync_session_data(backend)
         
@@ -335,6 +358,20 @@ def process_step():
                         print(f"DEBUG: First response preview: {selected_data['responses'][0].get('text', '')[:100]}...")
                     
                     backend.save_consolidated_session_data('survey_data', selected_data)
+                    
+                    # Analyze the data source to infer context information
+                    print("DEBUG: Analyzing data source...")
+                    try:
+                        data_analysis = backend.analyze_data_source(selected_data)
+                        backend.save_consolidated_session_data('data_source_analysis', data_analysis)
+                        print(f"DEBUG: ✅ Data analysis complete - Source: {data_analysis.get('data_source_type', 'Unknown')}")
+                        print(f"DEBUG: Business context: {data_analysis.get('business_context', 'Unknown')}")
+                        print(f"DEBUG: Found {len(data_analysis.get('author_types', []))} author types")
+                    except Exception as e:
+                        print(f"DEBUG: ⚠️ Data analysis failed: {e}, continuing with default")
+                        default_analysis = backend.get_default_data_source_analysis()
+                        backend.save_consolidated_session_data('data_source_analysis', default_analysis)
+                    
                     sync_session_data(backend)
                     print(f"DEBUG: ✅ SUCCESSFULLY SAVED dataset to session files with session_id: {new_session_id}")
                 else:
@@ -365,6 +402,39 @@ def process_step():
         if summary_description:
             session['summary_description'] = summary_description
             backend.session.set('summary_description', summary_description)
+            
+            # Process edited data source analysis if present
+            data_source_type = request.form.get('data_source_type', '').strip()
+            business_context = request.form.get('business_context', '').strip()
+            
+            if data_source_type or business_context:
+                # Collect participant data
+                participants = []
+                participant_index = 0
+                while True:
+                    role = request.form.get(f'participant_role_{participant_index}', '').strip()
+                    description = request.form.get(f'participant_desc_{participant_index}', '').strip()
+                    
+                    if role or description:
+                        if role and description:  # Only include if both are provided
+                            participants.append({
+                                'role': role,
+                                'description': description
+                            })
+                        participant_index += 1
+                    else:
+                        break
+                
+                # Update the data source analysis with user edits
+                updated_analysis = {
+                    'data_source_type': data_source_type,
+                    'author_types': participants,
+                    'business_context': business_context
+                }
+                
+                # Save the updated analysis
+                backend.save_consolidated_session_data('data_source_analysis', updated_analysis)
+                print(f"DEBUG: Updated data source analysis with user edits: {updated_analysis}")
             
             # Generate detailed summary instructions based on the description
             summary_instructions = backend.generate_summary_instructions(summary_description)

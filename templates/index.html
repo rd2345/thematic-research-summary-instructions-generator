@@ -152,6 +152,78 @@
                 <div class="step-container">
                     <h2>Step 2: Summary Description</h2>
                     
+                    <!-- Data Source Analysis Results (Editable) -->
+                    {% if data_source_analysis %}
+                        <div class="data-analysis-section">
+                            <h3>📊 Data Analysis Results <small style="font-weight: normal; color: #666;">(editable)</small></h3>
+                            <div class="analysis-results">
+                                
+                                <!-- Data Source Type -->
+                                <div class="analysis-item">
+                                    <label for="data_source_type"><strong>Data Source Type:</strong></label>
+                                    <input type="text" id="data_source_type" name="data_source_type" 
+                                           value="{{ data_source_analysis.data_source_type }}" 
+                                           class="form-control analysis-input"
+                                           placeholder="e.g., Call Transcripts, Support Chats">
+                                </div>
+                                
+                                <!-- Conversation Participants -->
+                                <div class="analysis-item">
+                                    <label><strong>Conversation Participants:</strong></label>
+                                    <div id="participants-container">
+                                        {% if data_source_analysis.author_types %}
+                                            {% for author in data_source_analysis.author_types %}
+                                                <div class="participant-row" data-index="{{ loop.index0 }}">
+                                                    <div class="participant-fields">
+                                                        <input type="text" 
+                                                               name="participant_role_{{ loop.index0 }}" 
+                                                               value="{{ author.role }}"
+                                                               placeholder="Role (e.g., Agent, Customer)"
+                                                               class="form-control participant-role">
+                                                        <input type="text" 
+                                                               name="participant_desc_{{ loop.index0 }}" 
+                                                               value="{{ author.description }}"
+                                                               placeholder="Role description"
+                                                               class="form-control participant-desc">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger remove-participant">Remove</button>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="participant-row" data-index="0">
+                                                <div class="participant-fields">
+                                                    <input type="text" 
+                                                           name="participant_role_0" 
+                                                           value=""
+                                                           placeholder="Role (e.g., Agent, Customer)"
+                                                           class="form-control participant-role">
+                                                    <input type="text" 
+                                                           name="participant_desc_0" 
+                                                           value=""
+                                                           placeholder="Role description"
+                                                           class="form-control participant-desc">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-participant">Remove</button>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" id="add-participant" class="btn btn-sm btn-outline-primary mt-2">
+                                        + Add Participant
+                                    </button>
+                                </div>
+                                
+                                <!-- Business Context -->
+                                <div class="analysis-item">
+                                    <label for="business_context"><strong>Business Context:</strong></label>
+                                    <textarea id="business_context" name="business_context" 
+                                              class="form-control analysis-textarea" rows="3"
+                                              placeholder="Describe the business domain and context">{{ data_source_analysis.business_context }}</textarea>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    {% endif %}
+                    
                     <p>Describe what aspects you want to summarize from the conversations. <em>Tip: 2-3 sentences work well for generating relevant summary categories.</em></p>
                     
                     <form method="POST" action="{{ url_for('process_step') }}">

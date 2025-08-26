@@ -509,4 +509,59 @@ $(document).ready(function() {
         });
     });
     
+    // Step 2: Dynamic Participant Management for Data Source Analysis
+    let participantIndex = $('.participant-row').length || 1;
+    
+    // Add participant functionality
+    $('#add-participant').click(function() {
+        const newParticipantRow = `
+            <div class="participant-row" data-index="${participantIndex}">
+                <div class="participant-fields">
+                    <input type="text" 
+                           name="participant_role_${participantIndex}" 
+                           value=""
+                           placeholder="Role (e.g., Agent, Customer)"
+                           class="form-control participant-role">
+                    <input type="text" 
+                           name="participant_desc_${participantIndex}" 
+                           value=""
+                           placeholder="Role description"
+                           class="form-control participant-desc">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-participant">Remove</button>
+                </div>
+            </div>
+        `;
+        
+        $('#participants-container').append(newParticipantRow);
+        participantIndex++;
+        
+        // Focus on the new role input
+        $(`input[name="participant_role_${participantIndex-1}"]`).focus();
+    });
+    
+    // Remove participant functionality (using event delegation for dynamically added elements)
+    $(document).on('click', '.remove-participant', function() {
+        const participantRow = $(this).closest('.participant-row');
+        
+        // Don't allow removing the last participant
+        if ($('.participant-row').length > 1) {
+            participantRow.remove();
+        } else {
+            // If it's the last one, just clear the values
+            participantRow.find('input').val('');
+        }
+    });
+    
+    // Auto-resize textareas
+    $('textarea.analysis-textarea').on('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+    
+    // Initialize textarea height on page load
+    $('textarea.analysis-textarea').each(function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+    
 });

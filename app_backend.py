@@ -117,102 +117,6 @@ class SummaryPromptBackend:
                             }
         return examples
 
-    def generate_default_classes(self):
-        """Generate default classification classes"""
-        return {
-            'high_score': {
-                'name': 'High Score',
-                'description': 'Responses that clearly deserve a high score based on the criteria',
-                'score': '100'
-            },
-            'low_score': {
-                'name': 'Low Score', 
-                'description': 'Responses that clearly deserve a low score based on the criteria',
-                'score': '0'
-            },
-            'not_relevant': {
-                'name': 'Not Relevant',
-                'description': 'Responses that are not relevant to the scoring criteria',
-                'score': ''
-            },
-            'unclear': {
-                'name': 'Unclear',
-                'description': 'Responses where it is unclear whether they should receive a high or low score',
-                'score': ''
-            }
-        }
-
-    def generate_smart_classes(self, score_description):
-        """Generate contextually relevant classes using LLM based on score description"""
-        
-        class_generation_prompt = f"""Based on the following scoring criteria, generate 4 classification categories that would be most relevant for scoring survey responses.
-
-SCORING CRITERIA:
-{score_description}
-
-Please generate exactly 4 categories following this pattern:
-1. A "high score" category - responses that clearly deserve high scores
-2. A "low score" category - responses that clearly deserve low scores  
-3. A "not relevant" category - responses not related to the scoring criteria
-4. An "unclear/ambiguous" category - responses where scoring is difficult to determine
-
-For each category, provide:
-- A clear, concise, specific name (1-3 words)
-- A detailed description explaining what types of responses belong in this category
-- A numeric score (use 100 for high score category, 0 for low score category, leave empty string for not relevant and unclear)
-
-Format your response as JSON like this:
-{{
-    "high_score": {{
-        "name": "Great Battery Performance",
-        "description": "Responses that mention the battery lasting a full day or longer, fast charging, or exceptional power management",
-        "score": "100"
-    }},
-    "low_score": {{
-        "name": "Poor Battery Performance", 
-        "description": "Responses that mention battery draining quickly, not lasting through the day, slow charging, or battery-related problems",
-        "score": "0"
-    }},
-    "not_relevant": {{
-        "name": "Non-Battery Related",
-        "description": "Responses that discuss other product features, general satisfaction, or topics unrelated to battery performance",
-        "score": ""
-    }},
-    "unclear": {{
-        "name": "Battery Mentions Unclear",
-        "description": "Responses that mention battery but without clear positive or negative sentiment, or with mixed/contradictory battery feedback",
-        "score": ""
-    }}
-}}
-
-Generate categories that are specifically tailored to the scoring criteria provided above."""
-
-        try:
-            llm_response = self.generate_response(class_generation_prompt)
-            
-            # Try to extract JSON from the response
-            json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-                classes = json.loads(json_str)
-                
-                # Validate that we have the expected structure
-                required_keys = ['high_score', 'low_score', 'not_relevant', 'unclear']
-                if all(key in classes for key in required_keys):
-                    for key in required_keys:
-                        if 'name' in classes[key] and 'description' in classes[key] and 'score' in classes[key]:
-                            continue
-                        else:
-                            raise ValueError("Missing name, description, or score")
-                    return classes
-            
-            # If parsing fails, fall back to default
-            print("Failed to parse LLM response for class generation, using defaults")
-            return self.generate_default_classes()
-            
-        except Exception as e:
-            print(f"Error generating smart classes: {e}")
-            return self.generate_default_classes()
 
     def generate_summary_instructions(self, summary_description):
         """Generate detailed summarization instructions using LLM based on summary description"""
@@ -324,6 +228,93 @@ For each conversation provided, create a structured summary that:
 - Follows the structure and focus areas outlined in the instructions
 
 When processing multiple conversations, ensure consistency in your approach and format."""
+
+    def analyze_data_source(self, conversation_data):
+        """Analyze conversation data to infer data source type, authors, and business context"""
+        
+        responses = conversation_data.get('responses', [])
+        if not responses:
+            return self.get_default_data_source_analysis()
+        
+        # Use first 5 conversations for analysis (or fewer if less available)
+        sample_conversations = responses[:5]
+        sample_text = "\n\n--- CONVERSATION ---\n".join([
+            resp.get('text', '')[:1000] for resp in sample_conversations  # Limit each to 1000 chars
+        ])
+        
+        analysis_prompt = f"""Analyze these conversation samples and provide structured information about the data source.
+
+CONVERSATION SAMPLES:
+{sample_text}
+
+Based on these samples, please provide:
+
+1. **Data Source Type**: What type of conversations are these? (e.g., "Call Transcripts", "Support Tickets", "Support Chats", "Forum Threads", "Email Exchanges", "Live Chat Sessions", etc.)
+
+2. **Author Types**: Identify the different types of participants/authors in these conversations. For each type, provide:
+   - Role name (e.g., "Agent", "Customer", "Moderator")
+   - One sentence description of that role
+
+3. **Business Context**: One sentence describing what type of business or organization this appears to be based on the conversation content.
+
+Format your response as JSON:
+{{
+    "data_source_type": "Call Transcripts",
+    "author_types": [
+        {{
+            "role": "Agent", 
+            "description": "Customer support representative helping customers with technical issues"
+        }},
+        {{
+            "role": "Customer",
+            "description": "End user of the software product seeking technical assistance"
+        }}
+    ],
+    "business_context": "A music software company providing technical support for their digital audio products"
+}}
+
+Analyze carefully and provide specific, accurate insights based on the actual conversation content."""
+
+        try:
+            llm_response = self.generate_response(analysis_prompt)
+            
+            # Try to extract JSON from the response
+            import re
+            json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                analysis = json.loads(json_str)
+                
+                # Validate required fields
+                required_fields = ['data_source_type', 'author_types', 'business_context']
+                if all(field in analysis for field in required_fields):
+                    if isinstance(analysis['author_types'], list) and len(analysis['author_types']) > 0:
+                        return analysis
+            
+            # If parsing fails, fall back to default
+            print("Failed to parse data source analysis, using default")
+            return self.get_default_data_source_analysis()
+            
+        except Exception as e:
+            print(f"Error analyzing data source: {e}")
+            return self.get_default_data_source_analysis()
+    
+    def get_default_data_source_analysis(self):
+        """Provide default data source analysis as fallback"""
+        return {
+            "data_source_type": "Support Conversations",
+            "author_types": [
+                {
+                    "role": "Agent", 
+                    "description": "Customer service representative assisting with inquiries and issues"
+                },
+                {
+                    "role": "Customer",
+                    "description": "User of the service seeking assistance or information"
+                }
+            ],
+            "business_context": "A service-oriented organization providing customer support"
+        }
 
     def generate_initial_summary_prompt(self, summary_description, summary_types):
         """Generate an intelligent summarization prompt using LLM based on description and summary types"""
