@@ -174,13 +174,30 @@ Based on your description: "{summary_description}"
 - Include enough detail for someone to understand the conversation without reading the full transcript
 - Highlight any urgent or high-priority items"""
 
-    def generate_initial_prompt_for_summarization(self, summary_description, summary_instructions):
-        """Generate initial prompt for conversation summarization using the detailed instructions"""
+    def generate_initial_prompt_for_summarization(self, summary_description, summary_instructions, data_source_analysis=None):
+        """Generate initial prompt for conversation summarization using the detailed instructions and data source context"""
+        
+        # Build data source context section
+        data_context = ""
+        if data_source_analysis:
+            data_context = f"""
+DATA SOURCE CONTEXT:
+- Data Source Type: {data_source_analysis.get('data_source_type', 'Unknown')}
+- Business Context: {data_source_analysis.get('business_context', 'Not specified')}"""
+            
+            if data_source_analysis.get('author_types'):
+                participants_info = []
+                for participant in data_source_analysis['author_types']:
+                    participants_info.append(f"  • {participant.get('role', 'Unknown')}: {participant.get('description', 'No description')}")
+                data_context += f"""
+- Conversation Participants:
+{chr(10).join(participants_info)}"""
         
         prompt_generation_request = f"""Create a comprehensive prompt for an AI to summarize conversations based on the following criteria and instructions.
 
 ORIGINAL SUMMARY DESCRIPTION:
 {summary_description}
+{data_context}
 
 DETAILED SUMMARY INSTRUCTIONS:
 {summary_instructions}
@@ -188,11 +205,12 @@ DETAILED SUMMARY INSTRUCTIONS:
 Please create a prompt that:
 1. Clearly explains the summarization task
 2. Incorporates the detailed instructions provided
-3. Ensures consistent, high-quality summaries
-4. Handles edge cases (unclear conversations, off-topic content, etc.)
-5. Specifies the desired output format
+3. Takes into account the data source type and participant roles when relevant
+4. Ensures consistent, high-quality summaries appropriate for the business context
+5. Handles edge cases (unclear conversations, off-topic content, etc.)
+6. Specifies the desired output format
 
-The prompt should be professional, clear, and designed for batch processing of multiple conversations."""
+The prompt should be professional, clear, and designed for batch processing of multiple conversations from this specific data source."""
 
         try:
             llm_response = self.generate_response(prompt_generation_request)
@@ -203,28 +221,48 @@ The prompt should be professional, clear, and designed for batch processing of m
             # Basic validation
             if len(prompt) < 100:
                 print("Generated prompt too short, using default")
-                return self.generate_default_summarization_prompt(summary_description, summary_instructions)
+                return self.generate_default_summarization_prompt(summary_description, summary_instructions, data_source_analysis)
                 
             return prompt
             
         except Exception as e:
             print(f"Error generating summarization prompt: {e}")
-            return self.generate_default_summarization_prompt(summary_description, summary_instructions)
+            return self.generate_default_summarization_prompt(summary_description, summary_instructions, data_source_analysis)
     
-    def generate_default_summarization_prompt(self, summary_description, summary_instructions):
+    def generate_default_summarization_prompt(self, summary_description, summary_instructions, data_source_analysis=None):
         """Generate default summarization prompt as fallback"""
+        
+        # Build data source context section for default prompt
+        data_context = ""
+        if data_source_analysis:
+            data_context = f"""
+
+DATA SOURCE CONTEXT:
+- Data Source Type: {data_source_analysis.get('data_source_type', 'Unknown')}
+- Business Context: {data_source_analysis.get('business_context', 'Not specified')}"""
+            
+            if data_source_analysis.get('author_types'):
+                participants_info = []
+                for participant in data_source_analysis['author_types']:
+                    participants_info.append(f"- {participant.get('role', 'Unknown')}: {participant.get('description', 'No description')}")
+                data_context += f"""
+- Conversation Participants:
+  {chr(10).join(participants_info)}"""
+        
         return f"""You are an expert at summarizing conversations. Your task is to create comprehensive summaries based on the following criteria:
 
 SUMMARY CRITERIA:
 {summary_description}
+{data_context}
 
 DETAILED INSTRUCTIONS:
 {summary_instructions}
 
 For each conversation provided, create a structured summary that:
 - Captures the main points and key information as specified in the instructions above
+- Takes into account the data source type and participant roles when relevant
 - Maintains accuracy to the original conversation
-- Uses clear, professional language
+- Uses clear, professional language appropriate for the business context
 - Follows the structure and focus areas outlined in the instructions
 
 When processing multiple conversations, ensure consistency in your approach and format."""

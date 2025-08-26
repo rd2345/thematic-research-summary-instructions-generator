@@ -451,9 +451,10 @@ def process_step():
                 backend.save_consolidated_session_data('data_source_analysis', updated_analysis)
                 print(f"DEBUG: Updated data source analysis with user edits: {updated_analysis}")
             
-            # Generate initial prompt using the summary instructions
+            # Generate initial prompt using summary instructions AND data source analysis
             summary_description = session.get('summary_description', '')
-            initial_prompt = backend.generate_initial_prompt_for_summarization(summary_description, edited_instructions)
+            data_source_analysis = backend.get_consolidated_session_data('data_source_analysis') or {}
+            initial_prompt = backend.generate_initial_prompt_for_summarization(summary_description, edited_instructions, data_source_analysis)
             backend.save_consolidated_session_data('initial_prompt', initial_prompt)
             sync_session_data(backend)
             
