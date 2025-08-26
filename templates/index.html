@@ -152,10 +152,68 @@
                 <div class="step-container">
                     <h2>Step 2: Summary Description</h2>
                     
-                    <!-- Data Source Analysis Results (Editable) -->
-                    {% if data_source_analysis %}
+                    <p>Describe what aspects you want to summarize from the conversations. <em>Tip: 2-3 sentences work well for generating relevant summary categories.</em></p>
+                    
+                    <form method="POST" action="{{ url_for('process_step') }}">
+                        <div class="form-group">
+                            <label for="summary_description">Summarization Description:</label>
+                            <textarea 
+                                id="summary_description"
+                                name="summary_description" 
+                                rows="4" 
+                                placeholder="Example: I want to create summaries focusing on customer satisfaction themes, sentiment patterns, and specific product or service feedback from these support conversations."
+                                required>{{ session.get('summary_description', '') }}</textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Generate Summary Information</button>
+                    </form>
+                    
+                    <!-- Sample Responses Preview - moved to bottom -->
+                    {% if dev_mode %}
+                        {% if sample_responses %}
+                            <div class="sample-responses-preview">
+                                <p>Examples from the <strong>{{ selected_dataset_name }}</strong> dataset</p>
+                                
+                                <div class="sample-responses-box">
+                                    <!-- Initial 3 examples -->
+                                    {% for response in sample_responses[:3] %}
+                                        <div class="sample-response-item">
+                                            <div class="response-text">{{ response.text }}</div>
+                                        </div>
+                                    {% endfor %}
+                                    
+                                    <!-- Hidden additional examples (4-10) -->
+                                    {% if sample_responses|length > 3 %}
+                                        <div id="additional-examples" style="display: none;">
+                                            {% for response in sample_responses[3:10] %}
+                                                <div class="sample-response-item">
+                                                    <div class="response-text">{{ response.text }}</div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- See more link -->
+                                        <div class="see-more-container">
+                                            <a href="#" id="see-more-examples" class="see-more-link">Show more examples</a>
+                                            <a href="#" id="see-less-examples" class="see-less-link" style="display: none;">Show fewer examples</a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            {% elif step == 3 %}
+                <!-- Step 3: Summary Instructions Review -->
+                <div class="step-container">
+                    <h2>Step 3: Review Summary Instructions</h2>
+                    
+                    <form method="POST" action="{{ url_for('process_step') }}">
+                        <!-- Data Source Analysis Results (Editable) -->
+                        {% if data_source_analysis %}
                         <div class="data-analysis-section">
-                            <h3>📊 Data Analysis Results <small style="font-weight: normal; color: #666;">(editable)</small></h3>
+                            <h3>📊 Data Source Analysis <small style="font-weight: normal; color: #666;">(editable)</small></h3>
                             <div class="analysis-results">
                                 
                                 <!-- Data Source Type -->
@@ -222,67 +280,9 @@
                                 
                             </div>
                         </div>
-                    {% endif %}
-                    
-                    <p>Describe what aspects you want to summarize from the conversations. <em>Tip: 2-3 sentences work well for generating relevant summary categories.</em></p>
-                    
-                    <form method="POST" action="{{ url_for('process_step') }}">
-                        <div class="form-group">
-                            <label for="summary_description">Summarization Description:</label>
-                            <textarea 
-                                id="summary_description"
-                                name="summary_description" 
-                                rows="4" 
-                                placeholder="Example: I want to create summaries focusing on customer satisfaction themes, sentiment patterns, and specific product or service feedback from these support conversations."
-                                required>{{ session.get('summary_description', '') }}</textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">Generate Summary Information</button>
-                    </form>
-                    
-                    <!-- Sample Responses Preview - moved to bottom -->
-                    {% if dev_mode %}
-                        {% if sample_responses %}
-                            <div class="sample-responses-preview">
-                                <p>Examples from the <strong>{{ selected_dataset_name }}</strong> dataset</p>
-                                
-                                <div class="sample-responses-box">
-                                    <!-- Initial 3 examples -->
-                                    {% for response in sample_responses[:3] %}
-                                        <div class="sample-response-item">
-                                            <div class="response-text">{{ response.text }}</div>
-                                        </div>
-                                    {% endfor %}
-                                    
-                                    <!-- Hidden additional examples (4-10) -->
-                                    {% if sample_responses|length > 3 %}
-                                        <div id="additional-examples" style="display: none;">
-                                            {% for response in sample_responses[3:10] %}
-                                                <div class="sample-response-item">
-                                                    <div class="response-text">{{ response.text }}</div>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                        
-                                        <!-- See more link -->
-                                        <div class="see-more-container">
-                                            <a href="#" id="see-more-examples" class="see-more-link">Show more examples</a>
-                                            <a href="#" id="see-less-examples" class="see-less-link" style="display: none;">Show fewer examples</a>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
                         {% endif %}
-                    {% endif %}
-                </div>
-
-            {% elif step == 3 %}
-                <!-- Step 3: Summary Instructions Review -->
-                <div class="step-container">
-                    <h2>Step 3: Review Summary Instructions</h2>
-                    <p>We've generated detailed instructions for summarizing conversations based on your criteria. Review and customize them as needed:</p>
-                    
-                    <form method="POST" action="{{ url_for('process_step') }}">
+                        
+                        <p>We've generated detailed instructions for summarizing conversations based on your criteria. Review and customize them as needed:</p>
                         <div class="form-group">
                             <label for="summary_instructions">Summary Instructions:</label>
                             <textarea 

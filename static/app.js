@@ -509,7 +509,7 @@ $(document).ready(function() {
         });
     });
     
-    // Step 2: Dynamic Participant Management for Data Source Analysis
+    // Step 3: Dynamic Participant Management for Data Source Analysis
     let participantIndex = $('.participant-row').length || 1;
     
     // Add participant functionality

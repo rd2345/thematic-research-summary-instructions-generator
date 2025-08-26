@@ -126,15 +126,15 @@ def show_step(step_num):
             print(f"DEBUG Step 2: First response preview: {responses[0].get('text', '')[:100]}...")
         print(f"DEBUG Step 2: Selected example in session: {session.get('selected_example', 'NOT_SET')}")
         
-        data_source_analysis = backend.get_consolidated_session_data('data_source_analysis') or {}
-        
         return render_template('index.html', **get_template_context(step=2, 
                              sample_responses=sample_responses, 
-                             selected_dataset_name=selected_dataset_name,
-                             data_source_analysis=data_source_analysis))
+                             selected_dataset_name=selected_dataset_name))
     elif step_num == 3:
         summary_instructions = backend.get_consolidated_session_data('summary_instructions') or ''
-        return render_template('index.html', **get_template_context(step=3, summary_instructions=summary_instructions))
+        data_source_analysis = backend.get_consolidated_session_data('data_source_analysis') or {}
+        return render_template('index.html', **get_template_context(step=3, 
+                             summary_instructions=summary_instructions,
+                             data_source_analysis=data_source_analysis))
     elif step_num == 4:
         prompt = backend.get_consolidated_session_data('initial_prompt') or ''
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
@@ -403,6 +403,21 @@ def process_step():
             session['summary_description'] = summary_description
             backend.session.set('summary_description', summary_description)
             
+            # Generate detailed summary instructions based on the description
+            summary_instructions = backend.generate_summary_instructions(summary_description)
+            backend.save_consolidated_session_data('summary_instructions', summary_instructions)
+            sync_session_data(backend)
+            return redirect(url_for('show_step', step_num=3))
+        else:
+            flash('Please provide a description of the summarization criteria')
+            return redirect(url_for('show_step', step_num=2))
+    
+    elif current_step == 3:
+        edited_instructions = request.form.get('summary_instructions', '').strip()
+        if edited_instructions:
+            # Save the edited summary instructions
+            backend.save_consolidated_session_data('summary_instructions', edited_instructions)
+            
             # Process edited data source analysis if present
             data_source_type = request.form.get('data_source_type', '').strip()
             business_context = request.form.get('business_context', '').strip()
@@ -435,21 +450,6 @@ def process_step():
                 # Save the updated analysis
                 backend.save_consolidated_session_data('data_source_analysis', updated_analysis)
                 print(f"DEBUG: Updated data source analysis with user edits: {updated_analysis}")
-            
-            # Generate detailed summary instructions based on the description
-            summary_instructions = backend.generate_summary_instructions(summary_description)
-            backend.save_consolidated_session_data('summary_instructions', summary_instructions)
-            sync_session_data(backend)
-            return redirect(url_for('show_step', step_num=3))
-        else:
-            flash('Please provide a description of the summarization criteria')
-            return redirect(url_for('show_step', step_num=2))
-    
-    elif current_step == 3:
-        edited_instructions = request.form.get('summary_instructions', '').strip()
-        if edited_instructions:
-            # Save the edited summary instructions
-            backend.save_consolidated_session_data('summary_instructions', edited_instructions)
             
             # Generate initial prompt using the summary instructions
             summary_description = session.get('summary_description', '')
