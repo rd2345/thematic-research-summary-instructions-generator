@@ -320,11 +320,11 @@
             {% elif step == 5 %}
                 <!-- Step 5: Run Inference -->
                 <div class="step-container">
-                    <h2>Step 5: Batch Processing Survey Responses</h2>
-                    <p>Generating summaries for responses...</p>
+                    <h2>Step 5: Generating Conversation Summaries</h2>
+                    <p>Creating detailed summaries for each conversation...</p>
                     
                     <div class="alert alert-info">
-                        <strong>Batch Processing:</strong> All responses are processed together in one API call for faster results and better consistency.
+                        <strong>Individual Processing:</strong> Each conversation is processed individually for better summary quality and detailed analysis.
                     </div>
                     
                     <div id="progress-container">
@@ -332,57 +332,86 @@
                             <div class="progress-bar-inner" id="progress-bar" style="width: 0%"></div>
                         </div>
                         {% if dev_mode %}
-                            <p id="progress-text">Starting batch processing...</p>
+                            <p id="progress-text">Starting summary generation...</p>
                         {% else %}
-                            <p id="progress-text">✅ Instructions Generated, now running summary generation on data...</p>
+                            <p id="progress-text">✅ Instructions Generated, now creating individual summaries...</p>
                         {% endif %}
                     </div>
                 </div>
 
                 <script>
-                // Auto-start inference when Step 5 loads
+                // Auto-start individual inference when Step 5 loads
                 $(document).ready(function() {
                     const isDevMode = {{ 'true' if dev_mode else 'false' }};
                     const initialDelay = isDevMode ? 500 : 2500; // Dev: 500ms, Production: 2.5s
 
+                    // Calculate total conversations (limited to 5) - define outside for access in all handlers
+                    const totalConversations = Math.min(5, {{survey_data.responses|length|default(0)}});
+                    
                     // Trigger inference automatically with conditional delay
                     setTimeout(function() {
-                        // Smooth transition to processing message
-                        $('#progress-text').fadeOut(300, function() {
-                            $(this).text('Initializing batch processing...').fadeIn(300);
-                        });
-                        
-                        let progress = 0;
                         const progressBar = $('#progress-bar');
                         const progressText = $('#progress-text');
+                        let currentConversation = 0;
                         
-                        const updateProgress = () => {
-                            progress += Math.random() * 25;
-                            if (progress > 90) progress = 90;
+                        // Initial message
+                        progressText.fadeOut(300, function() {
+                            $(this).text('Initializing summary generation...').fadeIn(300);
+                        });
+                        
+                        // Simulate realistic per-conversation progress
+                        const simulateConversationProgress = () => {
+                            currentConversation++;
                             
-                            progressBar.css('width', progress + '%');
-                            progressText.text(`Batch processing all responses... ${Math.round(progress)}%`);
+                            // Calculate actual percentage based on completed conversations
+                            const progressPercent = (currentConversation / totalConversations) * 85; // Cap at 85% until real completion
                             
-                            if (progress < 90) {
-                                setTimeout(updateProgress, 200 + Math.random() * 300);
+                            // Update progress bar smoothly
+                            progressBar.animate({width: progressPercent + '%'}, 500);
+                            
+                            // Update text to show X/Y progress
+                            if (currentConversation <= totalConversations) {
+                                progressText.fadeOut(200, function() {
+                                    $(this).text(`Processing conversation ${currentConversation} of ${totalConversations}...`).fadeIn(200);
+                                });
+                            }
+                            
+                            // Schedule next update if not done
+                            if (currentConversation < totalConversations) {
+                                // 2-3 seconds per conversation (realistic for API calls)
+                                setTimeout(simulateConversationProgress, 2000 + Math.random() * 1000);
                             }
                         };
                         
-                        updateProgress();
+                        // Start progress simulation after initial delay
+                        setTimeout(simulateConversationProgress, 1000);
                         
-                        // Actually start the batch inference
+                        // Actually start the individual inference processing
                         $.ajax({
                             url: '/run_inference',
                             method: 'POST',
+                            timeout: 300000, // 5 minute timeout for individual processing
                             success: function(response) {
-                                progressBar.css('width', '100%');
-                                progressText.text('Batch processing complete! ⚡');
+                                // Stop any remaining simulated progress
+                                clearTimeout(window.progressTimeout);
+                                
+                                // Show completion with actual count
+                                progressBar.stop().animate({width: '100%'}, 300);
+                                progressText.fadeOut(200, function() {
+                                    $(this).text(`All ${totalConversations} conversations summarized! ✨`).fadeIn(200);
+                                });
+                                
                                 setTimeout(() => {
                                     window.location.href = response.redirect || '/step/6';
-                                }, 800);
+                                }, 1500);
                             },
                             error: function(xhr, status, error) {
-                                progressText.text('Error occurred during batch processing: ' + error);
+                                console.error('Individual processing error:', xhr.responseText);
+                                let errorMsg = 'Error occurred during summary generation';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    errorMsg += ': ' + xhr.responseJSON.message;
+                                }
+                                progressText.text(errorMsg);
                                 progressText.css('color', '#e74c3c');
                             }
                         });

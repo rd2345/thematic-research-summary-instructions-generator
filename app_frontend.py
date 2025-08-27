@@ -139,7 +139,8 @@ def show_step(step_num):
         prompt = backend.get_consolidated_session_data('initial_prompt') or ''
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
     elif step_num == 5:
-        return render_template('index.html', **get_template_context(step=5))
+        survey_data = backend.get_consolidated_session_data('survey_data') or {}
+        return render_template('index.html', **get_template_context(step=5, survey_data=survey_data))
     elif step_num == 6:
         results = backend.load_results_from_file()
         classes = backend.get_consolidated_session_data('classes') or {}
@@ -487,7 +488,7 @@ def run_inference():
     print(f"DEBUG: Selected example from session: {session.get('selected_example', 'Not found')}")
     survey_data = backend.get_consolidated_session_data('survey_data') or {}
     print(f"DEBUG: Loaded survey data title: {survey_data.get('title', 'No title')}")
-    responses = survey_data.get('responses', [])[:50]  # Max 50 responses
+    responses = survey_data.get('responses', [])[:3]   # Limit to first 5 conversations
     print(f"DEBUG: Found {len(responses)} responses")
     if len(responses) > 0:
         print(f"DEBUG: First response preview: {responses[0].get('text', '')[:100]}...")
@@ -497,9 +498,9 @@ def run_inference():
     print(f"DEBUG: Prompt length: {len(prompt)}")
     
     try:
-        # Use backend's batch inference method
-        print("DEBUG: Calling backend.run_batch_inference...")
-        results = backend.run_batch_inference(responses, prompt)
+        # Use backend's individual inference method for better summary quality
+        print("DEBUG: Calling backend.run_individual_inference...")
+        results = backend.run_individual_inference(responses, prompt)
         
         if not results:
             print("DEBUG: No results generated")

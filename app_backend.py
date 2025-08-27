@@ -275,7 +275,7 @@ When processing multiple conversations, ensure consistency in your approach and 
             return self.get_default_data_source_analysis()
         
         # Use first 5 conversations for analysis (or fewer if less available)
-        sample_conversations = responses[:5]
+        sample_conversations = responses[:3]
         sample_text = "\n\n--- CONVERSATION ---\n".join([
             resp.get('text', '')[:1000] for resp in sample_conversations  # Limit each to 1000 chars
         ])
@@ -719,6 +719,59 @@ Return scores in this format:
                     'index': i
                 })
             return results
+
+    def run_individual_inference(self, responses, prompt):
+        """Process conversations individually for better summary quality"""
+        print("DEBUG: Starting individual inference processing...")
+        results = []
+        
+        for i, response in enumerate(responses):
+            response_text = response.get('text', response.get('response', ''))
+            print(f"DEBUG: Processing conversation {i+1}/{len(responses)}")
+            
+            # Create individual prompt for this conversation
+            individual_prompt = f"""{prompt}
+
+CONVERSATION TO SUMMARIZE:
+{response_text}
+
+Please provide a comprehensive summary based on the instructions above."""
+            
+            try:
+                print(f"DEBUG: Generating summary for conversation {i+1}...")
+                summary = self.generate_response(individual_prompt).strip()
+                print(f"DEBUG: Generated summary length: {len(summary)} characters")
+                
+                # Store result with both new and legacy field names for compatibility
+                result = {
+                    'response_text': response_text,
+                    'response': response_text,  # Backward compatibility
+                    'ai_summary': summary,
+                    'summary': summary,  # Backward compatibility  
+                    'ai_classification': summary,  # Legacy field for existing code
+                    'index': i,
+                    'full_response': summary
+                }
+                results.append(result)
+                
+            except Exception as e:
+                print(f"DEBUG: Error generating summary for conversation {i+1}: {e}")
+                error_summary = f'Error generating summary: {str(e)}'
+                
+                # Store error result with compatibility fields
+                result = {
+                    'response_text': response_text,
+                    'response': response_text,
+                    'ai_summary': error_summary,
+                    'summary': error_summary,
+                    'ai_classification': error_summary,
+                    'index': i,
+                    'full_response': error_summary
+                }
+                results.append(result)
+        
+        print(f"DEBUG: Completed individual inference. Generated {len(results)} results")
+        return results
 
     def analyze_feedback_patterns(self, feedback_data, results, classes):
         """Analyze Step 6 feedback to identify patterns in misclassifications"""
