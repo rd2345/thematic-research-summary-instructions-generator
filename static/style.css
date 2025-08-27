@@ -1183,21 +1183,33 @@ h1 {
 }
 
 .column-controls {
+    margin-top: 20px;
+}
+
+.column-control-row {
+    margin-bottom: 15px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
-.column-controls label {
-    font-weight: bold;
-    min-width: 120px;
+.column-control-row label {
+    min-width: 220px;
+    font-weight: 600;
+    color: #333;
 }
 
-.column-controls select {
+.column-control-row select {
     flex: 1;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 14px;
+}
+
+#process-csv {
+    margin-top: 15px;
+    width: 100%;
 }
 
 .upload-success {

@@ -67,3 +67,4 @@ aws-credentials.json
 # Temporary results files
 temp_results/
 *.tmp
+uploads/

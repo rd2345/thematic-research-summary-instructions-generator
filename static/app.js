@@ -153,7 +153,9 @@ $(document).ready(function() {
         response.preview.forEach(row => {
             previewHtml += '<tr>';
             response.columns.forEach(col => {
-                previewHtml += `<td>${row[col] || ''}</td>`;
+                const value = row[col] || '';
+                const truncated = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                previewHtml += `<td title="${value.replace(/"/g, '&quot;')}">${truncated}</td>`;
             });
             previewHtml += '</tr>';
         });
@@ -161,14 +163,30 @@ $(document).ready(function() {
         
         $('#csv-preview').html(previewHtml);
         
-        // Populate column select
+        // Populate all column selects
         const columnSelect = $('#column-select');
+        const conversationIdSelect = $('#conversation-id-select');
+        const authorSelect = $('#author-select');
+        
+        // Clear and populate response column (required)
         columnSelect.empty().append('<option value="">-- Select Column --</option>');
         
+        // Clear and populate required columns
+        conversationIdSelect.empty().append('<option value="">-- Select Column --</option>');
+        authorSelect.empty().append('<option value="">-- Select Column --</option>');
+        
         response.columns.forEach(col => {
-            const isRecommended = /comment|response|text|feedback|review|answer/i.test(col);
-            const option = `<option value="${col}"${isRecommended ? ' selected' : ''}>${col}${isRecommended ? ' (recommended)' : ''}</option>`;
-            columnSelect.append(option);
+            // Response column with recommendations
+            const isResponseRecommended = /comment|response|text|feedback|review|answer|content|message/i.test(col);
+            columnSelect.append(`<option value="${col}"${isResponseRecommended ? ' selected' : ''}>${col}${isResponseRecommended ? ' (recommended)' : ''}</option>`);
+            
+            // Conversation ID column with recommendations
+            const isIdRecommended = /conversation.*id|conv.*id|^id$|thread|ticket|session/i.test(col);
+            conversationIdSelect.append(`<option value="${col}"${isIdRecommended && conversationIdSelect.val() === '' ? ' selected' : ''}>${col}${isIdRecommended ? ' (recommended)' : ''}</option>`);
+            
+            // Author column with recommendations
+            const isAuthorRecommended = /author|user|name|speaker|agent|customer|participant|sender/i.test(col);
+            authorSelect.append(`<option value="${col}"${isAuthorRecommended && authorSelect.val() === '' ? ' selected' : ''}>${col}${isAuthorRecommended ? ' (recommended)' : ''}</option>`);
         });
         
         // Store filename for processing
@@ -177,14 +195,35 @@ $(document).ready(function() {
         // Show column selection interface
         $('#column-selection').show();
         
-        // Auto-enable process button if recommended column selected
-        if (columnSelect.val()) {
-            $('#process-csv').prop('disabled', false);
+        // Enable process button only if ALL THREE columns are selected
+        updateProcessButtonState();
+        
+        // Add event handlers for all column selects to update button state
+        $('#column-select, #conversation-id-select, #author-select').on('change', updateProcessButtonState);
+    }
+    
+    function updateProcessButtonState() {
+        const responseCol = $('#column-select').val();
+        const convIdCol = $('#conversation-id-select').val();
+        const authorCol = $('#author-select').val();
+        
+        // Enable button only if all three columns are selected
+        const allSelected = responseCol && convIdCol && authorCol;
+        $('#process-csv').prop('disabled', !allSelected);
+        
+        if (allSelected) {
+            $('#process-csv').text('Process Selected Columns');
+        } else {
+            $('#process-csv').text('Select All Required Columns');
         }
     }
     
     function processCsvColumn(filename, column) {
         $('#process-csv').prop('disabled', true).text('Processing...');
+        
+        // Get optional column selections
+        const conversationId = $('#conversation-id-select').val();
+        const author = $('#author-select').val();
         
         $.ajax({
             url: '/process_csv',
@@ -192,7 +231,9 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify({
                 filename: filename,
-                column: column
+                column: column,
+                conversation_id_column: conversationId,
+                author_column: author
             }),
             success: function(response) {
                 if (response.success) {

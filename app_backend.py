@@ -275,7 +275,7 @@ When processing multiple conversations, ensure consistency in your approach and 
             return self.get_default_data_source_analysis()
         
         # Use first 5 conversations for analysis (or fewer if less available)
-        sample_conversations = responses[:3]
+        sample_conversations = responses[:5]
         sample_text = "\n\n--- CONVERSATION ---\n".join([
             resp.get('text', '')[:1000] for resp in sample_conversations  # Limit each to 1000 chars
         ])
@@ -534,15 +534,9 @@ Return scores in this format:
         """Process uploaded CSV file and return column information"""
         try:
             # Try to read with utf-8 encoding first
-            with open(file_path, 'r', encoding='utf-8', newline='') as csvfile:
-                # Detect delimiter
-                sample = csvfile.read(1024)
-                csvfile.seek(0)
-                sniffer = csv.Sniffer()
-                delimiter = sniffer.sniff(sample).delimiter
-                
+            with open(file_path, 'r', encoding='utf-8', newline='') as csvfile:                
                 # Read CSV
-                reader = csv.DictReader(csvfile, delimiter=delimiter)
+                reader = csv.DictReader(csvfile, delimiter=',')
                 columns = reader.fieldnames
                 
                 # Get preview data (first 5 rows)
@@ -585,6 +579,144 @@ Return scores in this format:
                 }
             except Exception as e:
                 raise ValueError(f"Error reading CSV file: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Error processing CSV file: {str(e)}")
+
+    def extract_csv_conversation_data(self, file_path, response_column, conversation_id_column, author_column):
+        """Extract and group CSV data into conversation format - ALL COLUMNS REQUIRED"""
+        try:
+            # Try to read with utf-8 encoding first
+            with open(file_path, 'r', encoding='utf-8', newline='') as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=',')
+                
+                # Validate all required columns exist
+                if response_column not in reader.fieldnames:
+                    raise ValueError(f"Response column '{response_column}' not found in CSV")
+                if conversation_id_column not in reader.fieldnames:
+                    raise ValueError(f"Conversation ID column '{conversation_id_column}' not found in CSV")
+                if author_column not in reader.fieldnames:
+                    raise ValueError(f"Author column '{author_column}' not found in CSV")
+                
+                # Group messages by conversation ID
+                conversations = {}
+                
+                for row_index, row in enumerate(reader):
+                    response_text = row.get(response_column, '').strip()
+                    conv_id = row.get(conversation_id_column, '').strip()
+                    author_value = row.get(author_column, '').strip()
+                    
+                    if not response_text or not conv_id or not author_value:
+                        continue  # Skip rows with missing required data
+                        
+                    if conv_id not in conversations:
+                        conversations[conv_id] = []
+                    
+                    # Determine if this is Agent or Customer based on author column
+                    author = "Customer"  # Default
+                    if any(term in author_value.lower() for term in ['agent', 'support', 'rep', 'staff', 'operator']):
+                        author = "Agent"
+                    elif any(term in author_value.lower() for term in ['customer', 'user', 'client', 'caller']):
+                        author = "Customer"
+                    
+                    conversations[conv_id].append({
+                        'author': author,
+                        'text': response_text,
+                        'row_order': row_index  # Preserve CSV order
+                    })
+                
+                # Convert to conversation format
+                formatted_conversations = []
+                for conv_id, messages in conversations.items():
+                    if not messages:  # Skip empty conversations
+                        continue
+                        
+                    # Sort by row order to maintain chronological sequence
+                    messages.sort(key=lambda x: x['row_order'])
+                    
+                    # Build conversation string
+                    conversation_parts = []
+                    for msg in messages:
+                        conversation_parts.append(f"{msg['author']}:\n{msg['text']}")
+                    
+                    full_conversation = "\n\n".join(conversation_parts)
+                    formatted_conversations.append({'text': full_conversation})
+                
+                # Limit to 15 conversations max
+                if len(formatted_conversations) > 15:
+                    import random
+                    random.seed(42)  # Reproducible selection
+                    formatted_conversations = random.sample(formatted_conversations, 15)
+                
+                return formatted_conversations
+                
+        except UnicodeDecodeError:
+            # Try with different encoding
+            try:
+                with open(file_path, 'r', encoding='latin-1', newline='') as csvfile:
+                    reader = csv.DictReader(csvfile, delimiter=',')
+                    
+                    # Validate all required columns exist
+                    if response_column not in reader.fieldnames:
+                        raise ValueError(f"Response column '{response_column}' not found in CSV")
+                    if conversation_id_column not in reader.fieldnames:
+                        raise ValueError(f"Conversation ID column '{conversation_id_column}' not found in CSV")
+                    if author_column not in reader.fieldnames:
+                        raise ValueError(f"Author column '{author_column}' not found in CSV")
+                    
+                    # Group messages by conversation ID
+                    conversations = {}
+                    
+                    for row_index, row in enumerate(reader):
+                        response_text = row.get(response_column, '').strip()
+                        conv_id = row.get(conversation_id_column, '').strip()
+                        author_value = row.get(author_column, '').strip()
+                        
+                        if not response_text or not conv_id or not author_value:
+                            continue  # Skip rows with missing required data
+                            
+                        if conv_id not in conversations:
+                            conversations[conv_id] = []
+                        
+                        # Determine if this is Agent or Customer based on author column
+                        author = "Customer"  # Default
+                        if any(term in author_value.lower() for term in ['agent', 'support', 'rep', 'staff', 'operator']):
+                            author = "Agent"
+                        elif any(term in author_value.lower() for term in ['customer', 'user', 'client', 'caller']):
+                            author = "Customer"
+                        
+                        conversations[conv_id].append({
+                            'author': author,
+                            'text': response_text,
+                            'row_order': row_index  # Preserve CSV order
+                        })
+                    
+                    # Convert to conversation format
+                    formatted_conversations = []
+                    for conv_id, messages in conversations.items():
+                        if not messages:  # Skip empty conversations
+                            continue
+                            
+                        # Sort by row order to maintain chronological sequence
+                        messages.sort(key=lambda x: x['row_order'])
+                        
+                        # Build conversation string
+                        conversation_parts = []
+                        for msg in messages:
+                            conversation_parts.append(f"{msg['author']}:\n{msg['text']}")
+                        
+                        full_conversation = "\n\n".join(conversation_parts)
+                        formatted_conversations.append({'text': full_conversation})
+                    
+                    # Limit to 15 conversations max
+                    if len(formatted_conversations) > 15:
+                        import random
+                        random.seed(42)  # Reproducible selection
+                        formatted_conversations = random.sample(formatted_conversations, 15)
+                    
+                    return formatted_conversations
+                    
+            except Exception as e:
+                raise ValueError(f"Error reading CSV file with latin-1 encoding: {str(e)}")
         except Exception as e:
             raise ValueError(f"Error processing CSV file: {str(e)}")
 

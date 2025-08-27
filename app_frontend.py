@@ -274,9 +274,18 @@ def process_csv():
         data = request.get_json()
         filename = data.get('filename')
         column = data.get('column')
+        conversation_id_column = data.get('conversation_id_column')  # New optional column
+        author_column = data.get('author_column')  # New optional column
         
+        # STRICT VALIDATION - All three columns required
         if not filename or not column:
-            return jsonify({'success': False, 'message': 'Missing filename or column'}), 400
+            return jsonify({'success': False, 'message': 'Missing filename or response column'}), 400
+        
+        if not conversation_id_column:
+            return jsonify({'success': False, 'message': 'Conversation ID column is required for CSV processing'}), 400
+            
+        if not author_column:
+            return jsonify({'success': False, 'message': 'Author column is required for CSV processing'}), 400
         
         backend = get_backend()
         
@@ -287,17 +296,33 @@ def process_csv():
         if not os.path.exists(file_path):
             return jsonify({'success': False, 'message': 'File not found'}), 404
         
-        # Extract data from selected column using backend
-        responses = backend.extract_csv_column_data(file_path, column)
+        # Extract data using new conversation method (all columns required)
+        responses = backend.extract_csv_conversation_data(
+            file_path, 
+            column, 
+            conversation_id_column, 
+            author_column
+        )
         
         if not responses:
             return jsonify({'success': False, 'message': 'No valid responses found in selected column'}), 400
         
         # Save processed data using backend
         original_filename = filename.split('_', 2)[-1] if '_' in filename else filename
+        
+        # Build title with selected columns info
+        title_parts = [f'Uploaded: {original_filename}']
+        title_parts.append(f'Response: {column}')
+        if conversation_id_column:
+            title_parts.append(f'Conv ID: {conversation_id_column}')
+        if author_column:
+            title_parts.append(f'Author: {author_column}')
+        
         upload_data = {
-            'title': f'Uploaded: {original_filename} (Column: {column})',
-            'responses': responses
+            'title': ' | '.join(title_parts),
+            'responses': responses,
+            'conversation_id_column': conversation_id_column,
+            'author_column': author_column
         }
         backend.save_consolidated_session_data('survey_data', upload_data)
         

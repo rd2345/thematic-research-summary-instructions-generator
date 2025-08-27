@@ -118,15 +118,35 @@
                             
                             <!-- CSV Column Selection (shown after CSV upload) -->
                             <div class="column-selection" id="column-selection" style="display: none;">
-                                <h4>Select Comment Column</h4>
-                                <p>Choose the column that contains the survey responses/comments:</p>
+                                <h4>Select Data Columns</h4>
+                                <p>Map your CSV columns to the appropriate data fields:</p>
                                 <div class="csv-preview" id="csv-preview"></div>
                                 <div class="column-controls">
-                                    <label for="column-select">Response Column:</label>
-                                    <select id="column-select" class="form-control">
-                                        <option value="">-- Select Column --</option>
-                                    </select>
-                                    <button type="button" id="process-csv" class="btn btn-primary" disabled>Process Selected Column</button>
+                                    <!-- Conversation ID selector (required) -->
+                                    <div class="column-control-row">
+                                        <label for="conversation-id-select">Conversation ID Column (required):</label>
+                                        <select id="conversation-id-select" class="form-control">
+                                            <option value="">-- Select Column --</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Author column selector (required) -->
+                                    <div class="column-control-row">
+                                        <label for="author-select">Author Column (required):</label>
+                                        <select id="author-select" class="form-control">
+                                            <option value="">-- Select Column --</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Response column selector (required) -->
+                                    <div class="column-control-row">
+                                        <label for="column-select">Response Column (required):</label>
+                                        <select id="column-select" class="form-control">
+                                            <option value="">-- Select Column --</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <button type="button" id="process-csv" class="btn btn-primary" disabled>Process Selected Columns</button>
                                 </div>
                             </div>
                             
