@@ -427,42 +427,41 @@
                     
                     <div class="feedback-container">
                         {% if results %}
-                            <!-- Compact Review Interface - moved to top -->
+                            <!-- Summary Review Interface -->
                             <div class="compact-review-section">
-                                <h3>Review AI Classifications ({{ results|length }} responses)</h3>
-                                <p>Check "Correct" if the AI classification is right, uncheck to provide correction:</p>
+                                <h3>Review AI Summaries ({{ results|length }} conversations)</h3>
+                                <p>Review the AI-generated summaries and make corrections if needed:</p>
                                 
                                 <div class="review-list">
                                     {% for result in results[:50] %}
                                         <div class="review-item" data-index="{{ result.index }}">
-                                            <div class="review-row">
-                                                <div class="response-preview">
-                                                    <strong>#{{ result.index + 1 }}:</strong> {{ result.response_text }}
+                                            <div class="review-item-horizontal">
+                                                <!-- Left side: Conversation (65%) -->
+                                                <div class="conversation-column">
+                                                    <h5>Conversation #{{ result.index + 1 }}</h5>
+                                                    <div class="conversation-text">{{ result.response_text }}</div>
                                                 </div>
-                                                <div class="classification-display">
-                                                    <span class="ai-classification-tag">{{ result.ai_classification }}</span>
-                                                </div>
-                                                <div class="correction-controls">
-                                                    <label class="correct-checkbox">
-                                                        <input type="checkbox" class="is-correct" checked data-original="{{ result.ai_classification }}">
-                                                        <span class="checkmark">✓ Correct</span>
-                                                    </label>
+                                                
+                                                <!-- Right side: Summary (35%) -->
+                                                <div class="summary-column">
+                                                    <h5>AI Summary</h5>
+                                                    <div class="summary-text">{{ result.ai_summary|default(result.ai_classification) }}</div>
                                                 </div>
                                             </div>
                                             
-                                            <!-- Hidden correction section, shown when unchecked -->
+                                            <!-- Bottom: Controls (full width) -->
+                                            <div class="review-controls">
+                                                <label class="correct-checkbox">
+                                                    <input type="checkbox" class="is-correct" checked data-original="{{ result.ai_summary|default(result.ai_classification) }}">
+                                                    <span>✓ Summary is Correct</span>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Hidden correction section -->
                                             <div class="correction-section" style="display: none;">
-                                                <div class="correction-controls-expanded">
-                                                    <label>Correct classification:</label>
-                                                    <select class="classification-select">
-                                                        {% for ck, cv in classes.items() %}
-                                                            <option value="{{ cv.name }}" {{ 'selected' if cv.name == result.ai_classification else '' }}>
-                                                                {{ cv.name }}
-                                                            </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                    <textarea class="feedback-text" placeholder="Optional: Why is this incorrect?" rows="2"></textarea>
-                                                </div>
+                                                <label>Corrected Summary:</label>
+                                                <textarea class="summary-correction" rows="3">{{ result.ai_summary|default(result.ai_classification) }}</textarea>
+                                                <textarea class="feedback-text" placeholder="Optional: Why does this need correction?" rows="2"></textarea>
                                             </div>
                                         </div>
                                     {% endfor %}

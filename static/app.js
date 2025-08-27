@@ -261,14 +261,21 @@ $(document).ready(function() {
             
             if (!isCorrect) {
                 // Item is marked as incorrect, collect correction data
-                const newClassification = item.find('.classification-select').val();
+                // Try to find summary correction first, fall back to classification select
+                let newValue = item.find('.summary-correction').val();
+                if (!newValue) {
+                    // Fallback for classification mode
+                    newValue = item.find('.classification-select').val();
+                }
                 const feedbackText = item.find('.feedback-text').val().trim();
                 
                 changesCount++;
                 feedbackData.push({
                     index: index,
                     original_classification: originalClassification,
-                    new_classification: newClassification,
+                    new_classification: newValue,
+                    original_summary: originalClassification, // For compatibility
+                    new_summary: newValue,
                     feedback: feedbackText
                 });
             }
