@@ -345,8 +345,8 @@
                     const isDevMode = {{ 'true' if dev_mode else 'false' }};
                     const initialDelay = isDevMode ? 500 : 2500; // Dev: 500ms, Production: 2.5s
 
-                    // Calculate total conversations (limited to 5) - define outside for access in all handlers
-                    const totalConversations = Math.min(5, {{survey_data.responses|length|default(0)}});
+                    // Use actual count of conversations that will be processed from backend
+                    const totalConversations = {{ actual_inference_count|default(0) }};
                     
                     // Trigger inference automatically with conditional delay
                     setTimeout(function() {

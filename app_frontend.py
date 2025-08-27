@@ -16,6 +16,9 @@ app.secret_key = 'your-secret-key-change-this'
 # Read dev_mode from environment variable
 DEV_MODE = os.environ.get('DEV_MODE', 'false').lower() == 'true'
 
+# Configuration for inference processing
+INFERENCE_LIMIT = 3  # Number of conversations to process during inference
+
 def get_template_context(**kwargs):
     """Helper function to add common template variables"""
     kwargs['dev_mode'] = DEV_MODE
@@ -140,7 +143,14 @@ def show_step(step_num):
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
     elif step_num == 5:
         survey_data = backend.get_consolidated_session_data('survey_data') or {}
-        return render_template('index.html', **get_template_context(step=5, survey_data=survey_data))
+        # Calculate actual number of conversations that will be processed
+        responses = survey_data.get('responses', [])
+        actual_inference_count = min(len(responses), INFERENCE_LIMIT)
+        return render_template('index.html', **get_template_context(
+            step=5, 
+            survey_data=survey_data,
+            actual_inference_count=actual_inference_count
+        ))
     elif step_num == 6:
         results = backend.load_results_from_file()
         classes = backend.get_consolidated_session_data('classes') or {}
@@ -488,7 +498,7 @@ def run_inference():
     print(f"DEBUG: Selected example from session: {session.get('selected_example', 'Not found')}")
     survey_data = backend.get_consolidated_session_data('survey_data') or {}
     print(f"DEBUG: Loaded survey data title: {survey_data.get('title', 'No title')}")
-    responses = survey_data.get('responses', [])[:3]   # Limit to first 5 conversations
+    responses = survey_data.get('responses', [])[:INFERENCE_LIMIT]   # Limit to configured number of conversations
     print(f"DEBUG: Found {len(responses)} responses")
     if len(responses) > 0:
         print(f"DEBUG: First response preview: {responses[0].get('text', '')[:100]}...")
