@@ -39,6 +39,12 @@
                     <span class="step-name">Prompt Analysis</span>
                 </div>
             {% endif %}
+            {% if step == 8 %}
+                <div class="step active">
+                    <span class="step-number">Final</span>
+                    <span class="step-name">Export Instructions</span>
+                </div>
+            {% endif %}
         </div>
 
         <!-- Flash Messages -->
@@ -501,7 +507,10 @@
                         {% endif %}
                     </div>
                     
-                    <button id="submit-feedback" class="btn btn-primary">Submit Feedback & View Final Results</button>
+                    <div class="action-buttons-row" style="display: flex; gap: 10px; align-items: center;">
+                        <button id="submit-feedback" class="btn btn-primary">Submit Feedback & View Final Results</button>
+                        <button id="export-instructions" class="btn btn-secondary">I'm Happy - Export Instructions</button>
+                    </div>
                     
                     <!-- Debug and Export Info - moved to bottom -->
                     {% if dev_mode %}
@@ -753,6 +762,34 @@
                             }, 3000);
                         </script>
                     {% endif %}
+                </div>
+                
+            {% elif step == 8 %}
+                <!-- Step Final: Export Instructions -->
+                <div class="step-container">
+                    <h2>Step Final: Export Instructions</h2>
+                    <p>Here are your final summarization instructions. You can copy them for use in your own applications:</p>
+                    
+                    <div class="instructions-display">
+                        <h3>📋 Final Instructions</h3>
+                        <div class="instructions-text">
+                            <pre id="instructions-content" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #dee2e6; white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto;">{{ prompt }}</pre>
+                        </div>
+                    </div>
+                    
+                    <div class="export-actions" style="margin-top: 20px;">
+                        <button id="copy-instructions-json" class="btn btn-primary" style="margin-right: 10px;">
+                            📋 Copy Instructions String
+                        </button>
+                        <div id="copy-success-message" style="display: none; color: #28a745; font-weight: bold; margin-top: 10px;">
+                            ✅ Instructions copied to clipboard!
+                        </div>
+                    </div>
+                    
+                    <div class="navigation-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                        <a href="{{ url_for('show_step', step_num=6) }}" class="btn btn-secondary" style="margin-right: 10px;">← Back to Step 6</a>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">Start New Session</a>
+                    </div>
                 </div>
                 
             {% endif %}

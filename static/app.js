@@ -612,4 +612,67 @@ $(document).ready(function() {
         this.style.height = (this.scrollHeight) + 'px';
     });
     
+    // Step 6: Export Instructions button
+    $('#export-instructions').click(function(e) {
+        e.preventDefault();
+        window.location.href = '/step/final';
+    });
+    
+    // Step Final: Copy Instructions String functionality
+    $('#copy-instructions-json').click(function(e) {
+        e.preventDefault();
+        
+        // Get the instructions text from the pre element
+        const instructionsText = $('#instructions-content').text();
+        
+        // Create JSON string with the instructions
+        const jsonString = JSON.stringify({
+            "instructions": instructionsText
+        });
+        
+        // Copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+            // Modern approach
+            navigator.clipboard.writeText(jsonString).then(function() {
+                showCopySuccess();
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                fallbackCopy(jsonString);
+            });
+        } else {
+            // Fallback for older browsers or non-HTTPS
+            fallbackCopy(jsonString);
+        }
+    });
+    
+    function fallbackCopy(text) {
+        // Create temporary textarea element
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            showCopySuccess();
+        } catch (err) {
+            console.error('Fallback copy failed: ', err);
+            alert('Failed to copy to clipboard. Please copy the text manually.');
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+    
+    function showCopySuccess() {
+        const successMessage = $('#copy-success-message');
+        successMessage.show();
+        setTimeout(function() {
+            successMessage.fadeOut();
+        }, 3000);
+    }
+    
 });

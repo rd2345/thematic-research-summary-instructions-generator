@@ -71,9 +71,20 @@ def index():
     examples = backend.load_survey_examples()
     return render_template('index.html', **get_template_context(step=1, examples=examples))
 
+@app.route('/step/final')
+def show_step_final():
+    """Step Final: Export Instructions"""
+    backend = get_backend()
+    prompt = backend.get_consolidated_session_data('initial_prompt') or ''
+    if not prompt:
+        # If no prompt available, redirect to start
+        return redirect(url_for('index'))
+    
+    return render_template('index.html', **get_template_context(step=8, prompt=prompt))
+
 @app.route('/step/<float:step_num>')
 def show_step(step_num):
-    if step_num < 1 or step_num > 7.5:
+    if step_num < 1 or step_num > 8:
         return redirect(url_for('index'))
     
     # Redirect non-dev users away from Step 4 (prompt review)
