@@ -437,12 +437,18 @@ $(document).ready(function() {
         $('#see-more-examples').show();
     });
     
-    // Add loading state for class generation (Step 2 to Step 3)
+    // Add loading state for form submissions
     $('form').on('submit', function(e) {
         const form = $(this);
         const currentStep = $('.step.active .step-number').text();
         
-        if (currentStep === '2') {
+        if (currentStep === '1') {
+            const submitButton = form.find('button[type="submit"]');
+            
+            submitButton.prop('disabled', true)
+                       .text('Analyzing Input Data...')
+                       .addClass('generating');
+        } else if (currentStep === '2') {
             const submitButton = form.find('button[type="submit"]');
             
             submitButton.prop('disabled', true)
