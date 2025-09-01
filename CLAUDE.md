@@ -22,8 +22,10 @@ summary_prompt_gen_ux/
 The main purpose is to build an interface that allows users to:
 - Generate prompts for survey response summarization
 - **AI-powered summary type generation** - Automatically create relevant summary categories based on summarization criteria
+- **CSV data import** - Upload and process custom survey data with conversation grouping
 - Iterate and refine those prompts based on results
-- Test prompts against sample survey data
+- Test prompts against sample survey data or uploaded CSV files
+- **Export final prompts** - Copy refined instructions for external LLM integration
 - Optimize prompt effectiveness for consistent, comprehensive summarization
 
 ## LLM Integration Reference
@@ -57,56 +59,75 @@ pip install -r requirements.txt
 
 ### Running the Application
 ```bash
-# Option 1: Use startup script
+# Option 1: Use startup script (recommended)
 ./run.sh
 
-# Option 2: Manual startup
+# Option 2: Use startup script with dev mode (shows step 4)
+./run.sh --dev
+
+# Option 3: Manual startup
 source venv/bin/activate
-python app.py
+python3 app_frontend.py
 ```
 
 The application will be available at http://localhost:5000
 
+**Note:** If port 5000 is in use (common on macOS due to AirPlay), the run.sh script will automatically kill conflicting processes. For manual startup, use a different port if needed.
+
 ### Development Status
 
-- Flask web application with 7-step workflow implemented
+- Flask web application with 8-step workflow implemented
 - **Smart summary type generation** - Uses LLM to generate contextually relevant summary categories
+- **CSV upload functionality** - Import custom survey data from CSV files
+- **Export instructions feature** - Export final prompts for external use
 - Virtual environment setup with all dependencies
-- Three sample survey datasets included
+- Multiple sample survey datasets included
 - End-to-end functionality complete with user feedback integration
 
-## 7-Step Workflow Overview
+## 8-Step Workflow Overview
 
-The application guides users through a systematic 7-step process to create, test, and refine prompts for summarizing survey responses.
+The application guides users through a systematic 8-step process to create, test, and refine prompts for summarizing survey responses.
 
 **Linear Workflow:**
-1. **Step 1:** Select Survey Example → Choose from available datasets
+1. **Step 1:** Select Survey Example → Choose from available datasets or upload CSV
 2. **Step 2:** Summarization Description → Define summarization criteria  
 3. **Step 3:** Generate Summary Types → AI-powered summary categories
 4. **Step 4:** Review Prompt → AI-generated expert summarization prompt
 5. **Step 5:** Run Inference → Batch process all responses
 6. **Step 6:** Provide Feedback → Review and refine AI summaries
 7. **Step 7:** Final Results → View completed summarization results
+8. **Step Final:** Export Instructions → Copy final prompt for external use
 
 **Key Innovation:** The system uses AI at multiple stages to create contextually relevant summary types and expert-level prompts, then processes all responses in a single efficient batch call rather than individual API requests.
 
 ## Detailed Step Explanations
 
-### Step 1: Select Survey Example
-**Purpose:** Choose from pre-loaded survey datasets to work with
+### Step 1: Select Survey Example or Upload CSV
+**Purpose:** Choose from pre-loaded survey datasets or upload custom CSV data
 
 **User Experience:** 
-- View available survey datasets with titles and response counts
-- Select one dataset via radio button selection
-- Three built-in examples: Customer Satisfaction, Employee Feedback, Product Reviews
+- **Tab 1: Built-in Examples** - View available survey datasets with titles and response counts
+- **Tab 2: Upload CSV** - Upload custom survey data from CSV files
+- Built-in examples include: Customer Satisfaction, Employee Feedback, Product Reviews
+- CSV upload supports drag-and-drop or click-to-browse functionality
 
 **Technical Implementation:**
-- Loads JSON files from `examples/` directory using `load_survey_examples()`
-- Each dataset contains `title`, `description`, and `responses` array
+- **Built-in Examples:** Loads JSON files from `examples/` directory using `load_survey_examples()`
+- **CSV Upload:** Processes CSV files with automatic delimiter detection and column selection
 - Selected data stored in `session['survey_data']` for subsequent steps
 - Supports up to 50 responses per dataset (limit applied in Step 5)
 
-**Input Format:** JSON files with structure:
+**CSV Upload Process:**
+1. **File Upload:** Drag-and-drop or browse for CSV file
+2. **Column Selection:** Choose required columns:
+   - **Text Column:** Contains the survey response text (required)
+   - **Conversation ID Column:** Groups messages into conversations (required)
+   - **Author Column:** Identifies message authors (Agent/Customer) (required)
+3. **Data Transformation:** CSV data converted to conversation format matching internal structure
+4. **Preview:** Truncated values (50 chars max) shown for column selection
+
+**Input Formats:** 
+- **JSON files** with structure:
 ```json
 {
   "title": "Survey Name",
@@ -117,6 +138,11 @@ The application guides users through a systematic 7-step process to create, test
   ]
 }
 ```
+
+- **CSV files** with columns for:
+  - Response text (any column name)
+  - Conversation ID (for grouping related messages)
+  - Author/Speaker identification (Agent, Customer, etc.)
 
 ---
 
@@ -194,12 +220,18 @@ The application guides users through a systematic 7-step process to create, test
 - Processing message: "Batch processing all responses... X%"
 
 **Technical Implementation:**
-- Extracts up to 50 response texts from survey data
+- Extracts up to 50 response texts from survey data (configurable via `INFERENCE_LIMIT`)
+- **Dynamic progress display:** Shows actual count of conversations being processed
 - Uses `make_batch_inference_prompt()` to create single comprehensive prompt
 - Makes ONE API call via `generate_response()` instead of 50 individual calls
 - Parses batch JSON response using `get_summary_json()`
 - Stores results in `session['inference_results']` with dual field structure
 - Exports results to timestamped JSON file in `temp_results/` directory
+
+**Progress Display Features:**
+- **Real-time counting:** Progress bar denominator matches actual conversation count
+- **Configurable limits:** `INFERENCE_LIMIT = 3` (development) adjustable for production
+- **Accurate feedback:** No hardcoded values - dynamically calculated from dataset size
 
 **Batch Processing Benefits:**
 - **50x faster** than individual API calls
@@ -274,22 +306,63 @@ The application guides users through a systematic 7-step process to create, test
 - Incorporates any user corrections made during feedback phase
 - Provides summary statistics and option to begin new summarization session
 
+---
+
+### Step Final: Export Instructions
+**Purpose:** Export the final summarization prompt for use in external applications
+
+**User Experience:**
+- Click "I'm Happy - Export Instructions" button from Step 6
+- View final prompt with proper newline formatting preserved
+- Copy instructions as JSON string with single button click
+- Visual confirmation when copy operation succeeds
+- Option to return to Step 6 or start new session
+
+**Technical Implementation:**
+- Accessible via `/step/final` route (Step 8 in internal numbering)
+- Retrieves final prompt from `session['initial_prompt']`
+- Displays instructions with `<pre>` tags for formatting preservation
+- JavaScript handles clipboard operations with modern API + fallback
+- JSON export format: `{"instructions": "prompt_text"}`
+
+**Export Features:**
+- **Cross-browser compatibility:** Modern `navigator.clipboard` with `document.execCommand` fallback
+- **Proper formatting:** Preserves all newlines and spacing from original prompt
+- **JSON structure:** Ready for integration with external LLM applications
+- **User feedback:** Success message with auto-fade after 3 seconds
+- **Navigation options:** Return to feedback step or start fresh workflow
+
+**Use Cases:**
+- Integration with custom LLM applications
+- Sharing refined prompts across teams
+- Documentation of prompt engineering iterations
+- External API integration with consistent prompt structure
+
 ## Technical Implementation Details
 
 ### Session Management
-- Flask sessions store workflow state across steps
-- Key session variables: `step`, `selected_example`, `survey_data`, `summarization_description`, `summary_types`, `initial_prompt`, `inference_results`, `user_feedback`, `final_results`
-- Session cleared on new workflow start
-- Persistent across browser refresh within workflow
+- **Dual-layer architecture:** Flask sessions + backend consolidated session data
+- **Backend consolidation:** Uses `SessionManager` for persistent data storage in `temp_results/`
+- **Session files:** Individual JSON files per session ID (e.g., `session_ABC123_object.json`)
+- Key session variables: `step`, `selected_example`, `survey_data`, `summary_description`, `summary_instructions`, `classes`, `initial_prompt`, `inference_results`, `user_feedback`, `final_results`
+- Session cleared on new workflow start with new UUID session ID
+- Persistent across browser refresh and application restarts
 
 ### Data Flow Architecture
-1. **Step 1:** Load examples → session['survey_data']  
-2. **Step 2:** User input → session['summarization_description'] → AI summary type generation
-3. **Step 3:** AI summary types → user editing → session['summary_types'] → AI prompt generation  
-4. **Step 4:** AI prompt → user editing → session['initial_prompt']
-5. **Step 5:** Batch processing → session['inference_results'] + temp file export
-6. **Step 6:** User feedback → session['user_feedback'] → session['final_results']
+1. **Step 1:** Load examples OR CSV upload → session['survey_data'] + backend consolidation
+2. **Step 2:** User input → session['summary_description'] → AI summary type generation
+3. **Step 3:** AI summary types → user editing → session['summary_instructions'] → AI prompt generation  
+4. **Step 4:** AI prompt → user editing → session['initial_prompt'] + backend consolidation
+5. **Step 5:** Batch processing → session['inference_results'] + temp file export + backend consolidation
+6. **Step 6:** User feedback → session['user_feedback'] → session['final_results'] + backend consolidation
 7. **Step 7:** Final display with user corrections incorporated
+8. **Step Final:** Export final prompt as JSON string for external use
+
+### Backend Architecture
+- **Framework separation:** `app_frontend.py` (Flask UI) + `app_backend.py` (business logic)
+- **Session consolidation:** `get_consolidated_session_data()` and `save_consolidated_session_data()`
+- **Cross-framework compatibility:** Backend designed to work with Flask, terminal, or other interfaces
+- **File-based persistence:** Session data survives application restarts
 
 ### Error Handling & Fallbacks
 - **AI Generation Failures:** Automatic fallback to template-based approaches
@@ -301,20 +374,31 @@ The application guides users through a systematic 7-step process to create, test
 ### File Structure
 ```
 summary_prompt_gen_ux/
-├── app_frontend.py           # Flask web interface
+├── app_frontend.py           # Flask web interface (main entry point)
 ├── app_backend.py            # Core business logic (framework-agnostic)
 ├── app_terminal.py           # Terminal interface
-├── templates/index.html      # Single-page application template
+├── run.sh                   # Startup script with dev mode support
+├── templates/
+│   ├── index.html           # Single-page application template
+│   ├── components/          # Reusable template components
+│   └── steps/               # Step-specific templates
 ├── static/
 │   ├── style.css            # Professional styling
-│   └── app.js               # Interactive JavaScript
+│   ├── app.js               # Interactive JavaScript
+│   ├── css/                 # Additional stylesheets
+│   └── js/                  # Additional JavaScript modules
 ├── examples/                 # Sample survey datasets
-│   ├── customer_satisfaction.json
-│   ├── employee_feedback.json  
-│   └── product_reviews.json
-├── temp_results/            # Exported inference results
+│   ├── conversation_list_sample100.json # Full conversation examples
+│   └── product_reviews.json # Product review dataset
+├── uploads/                 # Temporary CSV upload storage
+├── temp_results/            # Session data and inference results
 ├── reference_materials/     # LLM integration examples
-└── requirements.txt         # Python dependencies
+│   ├── llm_call_example.py
+│   ├── llm_claude_example.py
+│   └── prompting_examples.py
+├── venv/                    # Virtual environment
+├── requirements.txt         # Python dependencies
+└── README.md               # Project documentation
 ```
 
 ## Key Features Summary
@@ -322,7 +406,12 @@ summary_prompt_gen_ux/
 - **AI-Powered Summary Type Generation:** Context-specific summary categories instead of generic templates
 - **Expert Prompt Creation:** Professional prompts with consistency guidelines  
 - **Efficient Batch Processing:** 50x faster and cheaper than individual API calls
+- **CSV Upload Support:** Import custom survey data with conversation grouping
+- **Dynamic Progress Display:** Real-time progress tracking with accurate conversation counts
+- **Export Instructions Feature:** Copy final prompts as JSON for external use
 - **Interactive Feedback Interface:** Visual distinction between AI vs human corrections
+- **Robust Session Management:** Dual-layer persistence with backend consolidation
+- **Cross-browser Compatibility:** Modern clipboard API with fallback support
 - **Robust Error Handling:** Comprehensive fallbacks and debug information
 - **Results Export:** Timestamped JSON files for analysis and debugging
 - **User Feedback Integration:** Single feedback cycle for summary corrections
@@ -334,7 +423,7 @@ summary_prompt_gen_ux/
 
 **Scenario:** Summarizing customer satisfaction survey responses
 
-1. **Step 1:** Select "Customer Satisfaction Survey" (15 responses)
+1. **Step 1:** Select "Customer Satisfaction Survey" (15 responses) OR upload CSV file with conversation data
 2. **Step 2:** Enter "I want to create summaries focusing on key satisfaction themes, sentiment patterns, and specific product feedback"  
 3. **Step 3:** Review AI-generated summary types:
    - "Key Satisfaction Themes" - Main topics and themes mentioned across responses
@@ -342,9 +431,10 @@ summary_prompt_gen_ux/
    - "Specific Product Feedback" - Concrete mentions of product features
    - "General Comments" - Other miscellaneous feedback not fitting other categories
 4. **Step 4:** Review and edit comprehensive AI-generated summarization prompt (15+ lines)
-5. **Step 5:** Batch process all 15 responses in ~3 seconds
+5. **Step 5:** Batch process all 15 responses in ~3 seconds with dynamic progress tracking
 6. **Step 6:** Review results, refine 2-3 summaries, provide feedback
 7. **Step 7:** View final results: 4 comprehensive summary categories with key insights extracted
+8. **Step Final:** Click "I'm Happy - Export Instructions" → Copy final prompt as JSON string for external use
 
 ### Expected Performance
 - **Processing Time:** 3-5 seconds for 50 responses (vs 2-3 minutes individually)
