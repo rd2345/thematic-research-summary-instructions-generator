@@ -440,7 +440,6 @@ summary_prompt_gen_ux/
 - **Processing Time:** 3-5 seconds for 50 responses (vs 2-3 minutes individually)
 - **API Cost:** ~$0.02 per batch (vs ~$1.00 for 50 individual calls)
 - **Quality:** Enhanced through user feedback and refinement capabilities
-- **Consistency:** Higher than individual processing due to batch context
 
 ## AWS Configuration
 
