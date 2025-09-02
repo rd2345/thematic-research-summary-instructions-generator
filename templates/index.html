@@ -17,7 +17,7 @@
                 <span class="step-number">1</span>
                 <span class="step-name">Select Example</span>
             </div>
-            {% for i in range(2, 8) %}
+            {% for i in range(2, 7) %}
                 {% if i != 4 or dev_mode %}
                     <div class="step {{ 'active' if i == step else 'completed' if i < step else '' }}">
                         <span class="step-number">{{ i }}</span>
@@ -27,7 +27,6 @@
                             {% elif i == 4 %}Review Prompt
                             {% elif i == 5 %}Run Inference
                             {% elif i == 6 %}Provide Feedback
-                            {% elif i == 7 %}Final Results
                             {% endif %}
                         </span>
                     </div>
@@ -503,7 +502,7 @@
                     </div>
                     
                     <div class="action-buttons-row" style="display: flex; gap: 10px; align-items: center;">
-                        <button id="submit-feedback" class="btn btn-primary">Submit Feedback & View Final Results</button>
+                        <button id="submit-feedback" class="btn btn-primary">Submit Feedback & Improve Instructions</button>
                         <button id="export-instructions" class="btn btn-secondary">I'm Happy - Export Instructions</button>
                     </div>
                     
@@ -554,117 +553,6 @@
                             </div>
                         {% endif %}
                     {% endif %}
-                </div>
-
-            {% elif step == 7 %}
-                <!-- Step 7: Final Results -->
-                <div class="step-container">
-                    <h2>Step 7: Final Results</h2>
-                    <p>Custom summary optimization complete! Here are your final results:</p>
-                    
-                    <div class="results-summary">
-                        {% if final_results %}
-                            <h3>📊 Feedback Summary</h3>
-                            
-                            <!-- Calculate feedback statistics -->
-                            {% set total_examples = final_results|length %}
-                            {% set feedback_data = user_feedback.get('feedback', []) %}
-                            {% set changes_count = user_feedback.get('changes_count', 0) %}
-                            {% set correct_count = total_examples - changes_count %}
-                            
-                            <div class="feedback-summary">
-                                <div class="summary-highlight">
-                                    <strong>Your feedback indicates that {{ correct_count }} out of {{ total_examples }} examples have been inferred as the correct category.</strong>
-                                </div>
-                                
-                                <!-- Category breakdown -->
-                                <h4>📈 Category Breakdown:</h4>
-                                {% set ai_classification_counts = {} %}
-                                {% set corrected_counts = {} %}
-                                
-                                <!-- Count AI classifications -->
-                                {% for result in final_results %}
-                                    {% set ai_class = result.ai_classification %}
-                                    {% set _ = ai_classification_counts.update({ai_class: ai_classification_counts.get(ai_class, 0) + 1}) %}
-                                {% endfor %}
-                                
-                                <!-- Count corrections -->
-                                {% for correction in feedback_data %}
-                                    {% set new_class = correction.new_classification %}
-                                    {% set _ = corrected_counts.update({new_class: corrected_counts.get(new_class, 0) + 1}) %}
-                                {% endfor %}
-                                
-                                <div class="category-breakdown">
-                                    {% for class_key, class_info in classes.items() %}
-                                        {% set ai_count = ai_classification_counts.get(class_info.name, 0) %}
-                                        {% set corrections_from_this_category = feedback_data|selectattr('original_classification', 'equalto', class_info.name)|list|length %}
-                                        {% set corrections_to_this_category = feedback_data|selectattr('new_classification', 'equalto', class_info.name)|list|length %}
-                                        
-                                        <!-- True count = AI classified + corrections TO this category - corrections FROM this category -->
-                                        {% set true_count = ai_count + corrections_to_this_category - corrections_from_this_category %}
-                                        
-                                        <!-- Correctly inferred = AI classified correctly (not corrected away from this category) -->
-                                        {% set correctly_inferred = ai_count - corrections_from_this_category %}
-                                        
-                                        <div class="category-stat">
-                                            <span class="category-name">{{ class_info.name }}:</span>
-                                            <span class="category-details">
-                                                <strong>{{ correctly_inferred }} / {{ true_count }} correct</strong>
-                                            </span>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            
-                            <!-- Iteration Options -->
-                            {% if user_feedback.get('changes_count', 0) > 0 and iteration_count < 3 %}
-                                <div class="iteration-section">
-                                    <h3>🔄 Improve Your Results</h3>
-                                    <p>Based on your feedback, we can refine the summarization instructions to improve accuracy. 
-                                       {% if iteration_count > 0 %}This is iteration {{ iteration_count + 1 }} of 3.{% endif %}</p>
-                                    
-                                    {% if iteration_history %}
-                                        <div class="iteration-history">
-                                            <h4>Previous Iterations:</h4>
-                                            {% for hist in iteration_history %}
-                                                <div class="iteration-item">
-                                                    <strong>Iteration {{ hist.iteration }}:</strong> 
-                                                    {{ hist.rationale[:100] }}...
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    
-                                    <div class="iteration-buttons">
-                                        <button id="iterate-prompt" class="btn btn-primary">🔄 Iterate on instructions</button>
-                                        <button id="finish-session" class="btn btn-secondary">✅ Finish Session</button>
-                                    </div>
-                                </div>
-                            {% elif iteration_count >= 3 %}
-                                <div class="iteration-limit-reached">
-                                    <h3>📊 Maximum Iterations Reached</h3>
-                                    <p>You've completed 3 iterations. The instructions have been refined based on your feedback.</p>
-                                </div>
-                            {% endif %}
-                            
-                            <!-- Prompt Display -->
-                            <div class="prompt-display">
-                                <h3>🎯 Summarization Instructions Used</h3>
-                                <p>These is the final instructions that was used for classification:</p>
-                                <div class="prompt-text">
-                                    <pre>{{ prompt }}</pre>
-                                </div>
-                            </div>
-                            
-                            <div class="action-buttons">
-                                <a href="{{ url_for('index') }}" class="btn btn-secondary">Start New Session</a>
-                            </div>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                <strong>No results available.</strong> Please complete the full workflow to see final results.
-                            </div>
-                        {% endif %}
-                    </div>
                 </div>
 
             {% elif step == 7.5 %}

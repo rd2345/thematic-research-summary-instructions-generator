@@ -84,7 +84,7 @@ def show_step_final():
 
 @app.route('/step/<float:step_num>')
 def show_step(step_num):
-    if step_num < 1 or step_num > 8:
+    if step_num < 1 or (step_num > 6 and step_num not in [7.5, 8]):
         return redirect(url_for('index'))
     
     # Redirect non-dev users away from Step 4 (prompt review)
@@ -166,20 +166,10 @@ def show_step(step_num):
         results = backend.load_results_from_file()
         classes = backend.get_consolidated_session_data('classes') or {}
         return render_template('index.html', **get_template_context(step=6, results=results, classes=classes))
-    elif step_num == 7:
-        final_results = backend.load_results_from_file()  # Use same results for final display
-        user_feedback = backend.get_consolidated_session_data('user_feedback') or {}
-        classes = backend.get_consolidated_session_data('classes') or {}
-        prompt = backend.get_consolidated_session_data('initial_prompt') or ''
-        iteration_count = backend.get_iteration_count()
-        iteration_history = backend.get_consolidated_session_data('iteration_history') or []
-        return render_template('index.html', **get_template_context(step=7, final_results=final_results, 
-                             user_feedback=user_feedback, classes=classes, prompt=prompt,
-                             iteration_count=iteration_count, iteration_history=iteration_history))
     elif step_num == 7.5:
         iteration_data = backend.get_consolidated_session_data('current_iteration_data') or {}
         if not iteration_data:
-            return redirect(url_for('show_step', step_num=7))
+            return redirect(url_for('show_step', step_num=6))
         return render_template('index.html', **get_template_context(step=7.5, iteration_data=iteration_data))
 
 @app.route('/upload_data', methods=['POST'])
@@ -605,9 +595,91 @@ def submit_feedback():
         
         sync_session_data(backend)
         
-        # Results are already stored in file, no need to move them
-        # The final results will be loaded from the same file in Step 7
-        response = jsonify({'status': 'complete', 'redirect': url_for('show_step', step_num=7)})
+        # Check if there are changes to iterate on
+        changes_count = feedback_data.get('changes_count', 0)
+        current_iteration = backend.get_iteration_count()
+        
+        if changes_count > 0 and current_iteration < 3:
+            # There are changes and we can iterate - trigger iteration automatically
+            print(f"DEBUG: Changes detected ({changes_count}), starting iteration {current_iteration + 1}")
+            
+            # Load required data for iteration
+            classes = backend.get_consolidated_session_data('classes') or {}
+            original_prompt = backend.get_consolidated_session_data('initial_prompt') or ''
+            summary_description = session.get('summary_description', '')
+            
+            # Analyze feedback patterns
+            print("DEBUG: Analyzing feedback patterns...")
+            feedback_analysis = backend.analyze_feedback_patterns(feedback_data, results, classes)
+            
+            if not feedback_analysis:
+                return jsonify({'status': 'error', 'message': 'Unable to analyze feedback patterns'}), 400
+            
+            # Generate refined prompt
+            print("DEBUG: Generating refined prompt...")
+            improved_prompt, rationale = backend.generate_refined_prompt(
+                original_prompt, feedback_analysis, classes, summary_description
+            )
+            
+            # Create intelligent diff
+            diff_data = backend.create_intelligent_diff(original_prompt, improved_prompt)
+            
+            # Auto-apply the improved prompt (skip manual approval)
+            print(f"DEBUG: Auto-applying improved prompt for iteration {current_iteration + 1}")
+            backend.save_consolidated_session_data('initial_prompt', improved_prompt)
+            
+            # Update iteration count
+            new_iteration_count = backend.increment_iteration_count()
+            
+            # Store iteration history with auto-applied flag
+            iteration_history = backend.get_consolidated_session_data('iteration_history') or []
+            iteration_history.append({
+                'iteration': new_iteration_count,
+                'original_prompt': original_prompt,
+                'improved_prompt': improved_prompt,
+                'rationale': rationale,
+                'feedback_analysis': feedback_analysis,
+                'changes_count': changes_count,
+                'auto_applied': True  # Flag to indicate this was automatically applied
+            })
+            backend.save_consolidated_session_data('iteration_history', iteration_history)
+            
+            # Clear current iteration data since we've applied it
+            backend.save_consolidated_session_data('current_iteration_data', {})
+            
+            print(f"DEBUG: About to sync session data...")
+            sync_session_data(backend)
+            print(f"DEBUG: Session data synced successfully")
+            
+            try:
+                print(f"DEBUG: Creating redirect URL...")
+                redirect_url = url_for('show_step', step_num=5)
+                print(f"DEBUG: Redirect URL created: {redirect_url}")
+                
+                print(f"DEBUG: Creating JSON response...")
+                response = jsonify({'status': 'iterate', 'redirect': redirect_url})
+                response.headers['Content-Type'] = 'application/json'
+                print(f"DEBUG: JSON response created successfully")
+                print(f"DEBUG: Response headers: {dict(response.headers)}")
+                print(f"DEBUG: Response data: {response.get_data(as_text=True)}")
+            except Exception as resp_error:
+                print(f"DEBUG: ERROR creating response: {resp_error}")
+                return jsonify({'status': 'error', 'message': f'Response creation failed: {str(resp_error)}'}), 500
+        elif changes_count == 0:
+            # No changes made - return flag to show popup
+            response = jsonify({
+                'status': 'no_changes',
+                'message': 'No changes or feedback given. If you\'d like to iterate, please make changes or add comments to examples'
+            })
+            response.headers['Content-Type'] = 'application/json'
+        else:
+            # Max iterations reached
+            response = jsonify({
+                'status': 'max_iterations',
+                'message': 'Maximum iterations (3) reached. The instructions have been refined based on your feedback.'
+            })
+            response.headers['Content-Type'] = 'application/json'
+        
         print(f"DEBUG: Sending response: {response.get_json()}")
         return response
     except Exception as e:
@@ -730,8 +802,8 @@ def reject_iteration():
         
         return jsonify({
             'status': 'success',
-            'message': 'Iteration rejected, returning to final results',
-            'redirect': url_for('show_step', step_num=7)
+            'message': 'Iteration rejected, returning to feedback step',
+            'redirect': url_for('show_step', step_num=6)
         })
         
     except Exception as e:

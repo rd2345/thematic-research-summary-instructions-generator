@@ -332,6 +332,7 @@ $(document).ready(function() {
             url: '/submit_feedback',
             method: 'POST',
             contentType: 'application/json',
+            dataType: 'json',  // Explicitly tell jQuery to expect JSON
             data: JSON.stringify({
                 feedback: feedbackData,
                 total_reviewed: totalReviewed,
@@ -339,16 +340,61 @@ $(document).ready(function() {
             }),
             success: function(response) {
                 console.log('Feedback submission successful:', response);
-                // Always redirect to final results
-                window.location.href = response.redirect;
+                console.log('Response status:', response.status);
+                console.log('Response redirect:', response.redirect);
+                
+                if (response.status === 'no_changes') {
+                    console.log('Handling no_changes case');
+                    alert(response.message);
+                    button.prop('disabled', false);
+                    button.text('Submit Feedback & Improve Instructions');
+                } else if (response.status === 'max_iterations') {
+                    console.log('Handling max_iterations case');
+                    alert(response.message);
+                    button.prop('disabled', false);
+                    button.text('Submit Feedback & Improve Instructions');
+                } else if (response.status === 'iterate') {
+                    console.log('Handling iterate case - redirecting to:', response.redirect);
+                    try {
+                        console.log('Attempting window.location.href redirect...');
+                        window.location.href = response.redirect;
+                        console.log('Redirect command executed');
+                    } catch (redirect_error) {
+                        console.error('Redirect failed:', redirect_error);
+                        console.log('Trying fallback redirect method...');
+                        window.location.replace(response.redirect);
+                    }
+                } else {
+                    console.log('Handling fallback case, status was:', response.status);
+                    if (response.redirect) {
+                        console.log('Fallback redirecting to:', response.redirect);
+                        window.location.href = response.redirect;
+                    } else {
+                        console.log('No redirect URL in response');
+                    }
+                }
             },
             error: function(xhr, status, error) {
-                console.error('Feedback submission error:', error, xhr.responseText);
-                button.prop('disabled', false).text('Submit Feedback & View Final Results');
+                console.error('=== AJAX ERROR DEBUG ===');
+                console.error('Error:', error);
+                console.error('Status:', status);
+                console.error('XHR Status:', xhr.status);
+                console.error('XHR Response Text:', xhr.responseText);
+                console.error('XHR Ready State:', xhr.readyState);
+                console.error('XHR Status Text:', xhr.statusText);
+                console.error('XHR Response Headers:', xhr.getAllResponseHeaders());
+                console.error('========================');
+                
+                button.prop('disabled', false).text('Submit Feedback & Improve Instructions');
+                alert('Error submitting feedback. Check console for details.');
             },
-            timeout: 10000, // 10 second timeout
-            complete: function() {
-                console.log('AJAX request completed');
+            timeout: 30000, // Increase to 30 second timeout
+            complete: function(xhr, status) {
+                console.log('=== AJAX COMPLETE DEBUG ===');
+                console.log('Final status:', status);
+                console.log('XHR status:', xhr.status);
+                console.log('Response headers:', xhr.getAllResponseHeaders());
+                console.log('==========================');
             }
         });
     });
@@ -481,7 +527,9 @@ $(document).ready(function() {
         }
     });
     
-    // Step 7: Iteration functionality
+    // Step 7: Iteration functionality - No longer needed as iteration happens automatically in submit_feedback
+    // Keeping for reference but commented out
+    /*
     $('#iterate-prompt').click(function() {
         const button = $(this);
         button.prop('disabled', true)
@@ -515,6 +563,7 @@ $(document).ready(function() {
             }
         });
     });
+    */
     
     $('#finish-session').click(function() {
         // Just hide the iteration section to show the final results
