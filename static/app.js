@@ -219,7 +219,9 @@ $(document).ready(function() {
     }
     
     function processCsvColumn(filename, column) {
-        $('#process-csv').prop('disabled', true).text('Processing...');
+        $('#process-csv').prop('disabled', true)
+                         .text('🔄 Processing Selected Columns...')
+                         .addClass('btn-processing');
         
         // Get optional column selections
         const conversationId = $('#conversation-id-select').val();
@@ -240,13 +242,17 @@ $(document).ready(function() {
                     showUploadSuccess(response);
                 } else {
                     alert(response.message);
-                    $('#process-csv').prop('disabled', false).text('Process Selected Column');
+                    $('#process-csv').prop('disabled', false)
+                                     .text('Process Selected Columns')
+                                     .removeClass('btn-processing');
                 }
             },
             error: function(xhr) {
                 const response = xhr.responseJSON || {};
                 alert(response.message || 'Processing failed. Please try again.');
-                $('#process-csv').prop('disabled', false).text('Process Selected Column');
+                $('#process-csv').prop('disabled', false)
+                                 .text('Process Selected Columns')
+                                 .removeClass('btn-processing');
             }
         });
     }
