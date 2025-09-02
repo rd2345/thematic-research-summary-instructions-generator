@@ -72,6 +72,17 @@ python3 app_frontend.py
 
 The application will be available at http://localhost:5000
 
+### Running Tests or Python Scripts
+**IMPORTANT: Always activate the virtual environment before running any Python scripts**
+```bash
+# ALWAYS activate virtual environment first
+source venv/bin/activate
+
+# Then run Python scripts
+python3 test_unseen_selection.py
+python3 any_script.py
+```
+
 **Note:** If port 5000 is in use (common on macOS due to AirPlay), the run.sh script will automatically kill conflicting processes. For manual startup, use a different port if needed.
 
 ### Development Status

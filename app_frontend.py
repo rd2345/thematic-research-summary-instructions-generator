@@ -58,11 +58,15 @@ def index():
     session.clear()
     session['step'] = 1
     session['session_id'] = str(uuid.uuid4())  # Force new session ID
+    session['seen_indices'] = []  # Initialize seen examples tracking (array positions)
+    session['current_examples'] = list(range(INFERENCE_LIMIT))  # Initialize current working examples
     
     # Get fresh backend with new session
     backend = get_backend()
     backend.session.clear()
     backend.session.set('step', 1)
+    backend.session.set('seen_indices', [])
+    backend.session.set('current_examples', list(range(INFERENCE_LIMIT)))
     backend.reset_iteration_count()
     
     print("DEBUG: Session cleared completely - fresh start guaranteed")
@@ -103,11 +107,15 @@ def show_step(step_num):
         session.clear()
         session['step'] = 1
         session['session_id'] = str(uuid.uuid4())  # Force new session ID
+        session['seen_indices'] = []  # Initialize seen examples tracking (array positions)
+        session['current_examples'] = list(range(INFERENCE_LIMIT))  # Initialize current working examples
         
         # Get fresh backend with new session
         backend = get_backend()
         backend.session.clear()
         backend.session.set('step', 1)
+        backend.session.set('seen_indices', [])
+        backend.session.set('current_examples', list(range(INFERENCE_LIMIT)))
         
         print("DEBUG: Session cleared completely - fresh start from step 1")
     else:
@@ -154,13 +162,25 @@ def show_step(step_num):
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
     elif step_num == 5:
         survey_data = backend.get_consolidated_session_data('survey_data') or {}
-        # Calculate actual number of conversations that will be processed
-        responses = survey_data.get('responses', [])
-        actual_inference_count = min(len(responses), INFERENCE_LIMIT)
+        preselected_indices = session.get('preselected_indices', [])
+        
+        if preselected_indices:
+            # Use preselected indices count
+            actual_inference_count = len(preselected_indices)
+            is_preselected = True
+            print(f"DEBUG: Step 5 loading with {actual_inference_count} preselected response indices: {preselected_indices}")
+        else:
+            # Calculate actual number of conversations that will be processed normally
+            responses = survey_data.get('responses', [])
+            actual_inference_count = min(len(responses), INFERENCE_LIMIT)
+            is_preselected = False
+            print(f"DEBUG: Step 5 loading with normal {actual_inference_count} responses")
+        
         return render_template('index.html', **get_template_context(
             step=5, 
             survey_data=survey_data,
-            actual_inference_count=actual_inference_count
+            actual_inference_count=actual_inference_count,
+            is_preselected=is_preselected
         ))
     elif step_num == 6:
         results = backend.load_results_from_file()
@@ -521,11 +541,32 @@ def run_inference():
     print("=== DEBUG: Starting run_inference ===")
     backend = get_backend()
     
-    print(f"DEBUG: Selected example from session: {session.get('selected_example', 'Not found')}")
+    # Load survey data and session info
     survey_data = backend.get_consolidated_session_data('survey_data') or {}
-    print(f"DEBUG: Loaded survey data title: {survey_data.get('title', 'No title')}")
-    responses = survey_data.get('responses', [])[:INFERENCE_LIMIT]   # Limit to configured number of conversations
-    print(f"DEBUG: Found {len(responses)} responses")
+    all_responses = survey_data.get('responses', [])
+    
+    if session.get('is_unseen_run'):
+        print("DEBUG: UNSEEN MODE - Calculating next batch based on seen_indices")
+        # UNSEEN MODE: Calculate next batch and update current_examples
+        seen_count = len(session.get('seen_indices', []))
+        start_idx = seen_count  
+        end_idx = start_idx + INFERENCE_LIMIT
+        new_examples = list(range(start_idx, end_idx))
+        session['current_examples'] = new_examples
+        backend.session.set('current_examples', new_examples)
+        
+        print(f"DEBUG: Seen count: {seen_count}, new examples: {new_examples}")
+        responses = [all_responses[i] for i in new_examples if i < len(all_responses)]
+        is_unseen_run = True
+    else:
+        print("DEBUG: NORMAL MODE - Using current_examples")
+        # NORMAL MODE: Use current_examples (consistent)
+        current_examples = session.get('current_examples', list(range(INFERENCE_LIMIT)))
+        print(f"DEBUG: Current examples: {current_examples}")
+        responses = [all_responses[i] for i in current_examples if i < len(all_responses)]
+        is_unseen_run = False
+    
+    print(f"DEBUG: Processing {len(responses)} responses (unseen_run: {is_unseen_run})")
     if len(responses) > 0:
         print(f"DEBUG: First response preview: {responses[0].get('text', '')[:100]}...")
     prompt = backend.get_consolidated_session_data('initial_prompt') or ''
@@ -544,9 +585,35 @@ def run_inference():
         
         print(f"Created {len(results)} results")  # Debug logging
         
-        # Save results using backend
-        backend.save_results_to_file(results)
-        print(f"Stored {len(results)} results in file")  # Debug logging
+        # Track seen response INDICES using actual current_examples
+        seen_indices = session.get('seen_indices', [])
+        current_examples = session.get('current_examples', list(range(INFERENCE_LIMIT)))
+        
+        # Save results using backend with original indices
+        backend.save_results_to_file(results, current_examples)
+        print(f"Stored {len(results)} results in file with indices {current_examples}")  # Debug logging
+        print(f"DEBUG: Tracking {len(responses)} processed responses")
+        print(f"DEBUG: Current examples indices: {current_examples}")
+        print(f"DEBUG: Existing seen_indices before tracking: {seen_indices}")
+        
+        # Track the actual current_examples indices that were processed
+        for idx in current_examples:
+            if idx < len(all_responses):  # Ensure index is valid
+                print(f"DEBUG: Processing current_example index [{idx}], text: {all_responses[idx].get('text', '')[:30] if idx < len(all_responses) else 'N/A'}...")
+                
+                if idx not in seen_indices:
+                    seen_indices.append(idx)
+                    print(f"DEBUG:   -> Added index {idx} to seen list")
+                else:
+                    print(f"DEBUG:   -> Index {idx} already in seen list")
+                
+        session['seen_indices'] = seen_indices
+        backend.session.set('seen_indices', seen_indices)
+        print(f"DEBUG: Final tracked seen indices: {seen_indices}")
+        
+        # Clear unseen run flag after processing
+        session.pop('is_unseen_run', None)
+        backend.session.set('is_unseen_run', False)
         
         sync_session_data(backend)
         return jsonify({'status': 'success', 'redirect': url_for('show_step', step_num=6)})
@@ -556,6 +623,33 @@ def run_inference():
         import traceback
         print(f"DEBUG: Full traceback: {traceback.format_exc()}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/preselect_unseen', methods=['POST'])
+def preselect_unseen():
+    """Set unseen flag and redirect to Step 5 for processing"""
+    print("=== DEBUG: Starting preselect_unseen (SIMPLIFIED) ===")
+    backend = get_backend()
+    
+    # Check if there are any unseen examples available
+    seen_indices = session.get('seen_indices', [])
+    survey_data = backend.get_consolidated_session_data('survey_data') or {}
+    all_responses = survey_data.get('responses', [])
+    
+    seen_count = len(seen_indices)
+    total_count = len(all_responses)
+    
+    print(f"DEBUG: Seen: {seen_count}, Total: {total_count}")
+    
+    if seen_count >= total_count:
+        return jsonify({'status': 'error', 'message': 'No unseen examples available for processing'})
+    
+    # Set unseen flag - calculation will happen in /run_inference
+    session['is_unseen_run'] = True
+    backend.session.set('is_unseen_run', True)
+    sync_session_data(backend)
+    
+    print("DEBUG: Set unseen flag, redirecting to Step 5")
+    return jsonify({'status': 'success', 'redirect': url_for('show_step', step_num=5)})
 
 @app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():

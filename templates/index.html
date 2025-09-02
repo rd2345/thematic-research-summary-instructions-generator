@@ -351,7 +351,9 @@
                         <div class="progress">
                             <div class="progress-bar-inner" id="progress-bar" style="width: 0%"></div>
                         </div>
-                        {% if dev_mode %}
+                        {% if session.get('is_unseen_run') %}
+                            <p id="progress-text">Running inference on new unseen examples...</p>
+                        {% elif dev_mode %}
                             <p id="progress-text">Starting summary generation...</p>
                         {% else %}
                             <p id="progress-text">✅ Instructions Generated, now creating individual summaries...</p>
@@ -363,7 +365,15 @@
                 // Auto-start individual inference when Step 5 loads
                 $(document).ready(function() {
                     const isDevMode = {{ 'true' if dev_mode else 'false' }};
-                    const initialDelay = isDevMode ? 500 : 2500; // Dev: 500ms, Production: 2.5s
+                    const isPreselected = {{ 'true' if is_preselected else 'false' }};
+                    
+                    // Skip delay if processing preselected unseen examples
+                    let initialDelay;
+                    if (isPreselected) {
+                        initialDelay = 100; // Immediate start for preselected examples
+                    } else {
+                        initialDelay = isDevMode ? 500 : 2500; // Normal delay: Dev: 500ms, Production: 2.5s
+                    }
 
                     // Use actual count of conversations that will be processed from backend
                     const totalConversations = {{ actual_inference_count|default(0) }};
@@ -503,6 +513,7 @@
                     
                     <div class="action-buttons-row" style="display: flex; gap: 10px; align-items: center;">
                         <button id="submit-feedback" class="btn btn-primary">Submit Feedback & Improve Instructions</button>
+                        <button id="rerun-unseen" class="btn btn-info">Rerun Inference on Unseen Examples</button>
                         <button id="export-instructions" class="btn btn-secondary">I'm Happy - Export Instructions</button>
                     </div>
                     

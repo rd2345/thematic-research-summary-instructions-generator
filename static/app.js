@@ -444,6 +444,47 @@ $(document).ready(function() {
         });
     });
     
+    // Rerun inference on unseen examples
+    $('#rerun-unseen').click(function() {
+        const button = $(this);
+        const originalText = button.text();
+        
+        // Disable button and show processing state
+        button.prop('disabled', true)
+              .text('🔄 Selecting Unseen Examples...')
+              .addClass('btn-processing');
+        
+        // Submit request to preselect unseen examples and redirect to Step 5
+        $.ajax({
+            url: '/preselect_unseen',
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'success') {
+                    console.log('Successfully preselected unseen examples, redirecting to Step 5');
+                    // Redirect to Step 5 which will immediately process the preselected examples
+                    window.location.href = response.redirect;
+                } else {
+                    alert('Error: ' + (response.message || 'Unknown error occurred'));
+                    button.prop('disabled', false)
+                          .text(originalText)
+                          .removeClass('btn-processing');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Preselect unseen error:', xhr.responseText);
+                let errorMsg = 'Error selecting unseen examples';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg += ': ' + xhr.responseJSON.message;
+                }
+                alert(errorMsg);
+                button.prop('disabled', false)
+                      .text(originalText)
+                      .removeClass('btn-processing');
+            },
+            timeout: 30000 // 30 second timeout for selection
+        });
+    });
+    
     // Initialize checkbox handlers for dynamically loaded content
     $(document).on('change', '.is-correct', function() {
         const checkbox = $(this);

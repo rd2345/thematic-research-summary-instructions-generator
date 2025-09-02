@@ -905,6 +905,38 @@ Please provide a comprehensive summary based on the instructions above."""
         print(f"DEBUG: Completed individual inference. Generated {len(results)} results")
         return results
 
+    def select_unseen_responses(self, responses, seen_response_ids, limit):
+        """Select unseen responses excluding those already processed"""
+        print(f"DEBUG: select_unseen_responses called with {len(responses)} total responses, seen_ids: {seen_response_ids}, limit: {limit}")
+        
+        if not seen_response_ids:
+            print(f"DEBUG: No seen IDs, returning first {limit} responses")
+            return responses[:limit]
+        
+        unseen_responses = []
+        print(f"DEBUG: Checking each response for unseen status:")
+        for index, response in enumerate(responses):
+            response_id = response.get('id', f"auto_{index}")
+            is_unseen = response_id not in seen_response_ids
+            print(f"DEBUG:   [{index}] ID: {response_id}, unseen: {is_unseen}, text: {response.get('text', '')[:30]}...")
+            
+            if is_unseen:
+                unseen_responses.append(response)
+                print(f"DEBUG:     -> Added to unseen list (now {len(unseen_responses)} unseen)")
+                if len(unseen_responses) >= limit:
+                    print(f"DEBUG:     -> Reached limit of {limit}, stopping search")
+                    break
+        
+        # If not enough unseen responses, fall back to seen ones to meet limit
+        if len(unseen_responses) < limit:
+            print(f"DEBUG: Only {len(unseen_responses)} unseen responses available, adding seen responses to reach limit of {limit}")
+            seen_responses = [r for index, r in enumerate(responses) if r.get('id', f"auto_{index}") in seen_response_ids]
+            needed = limit - len(unseen_responses)
+            unseen_responses.extend(seen_responses[:needed])
+        
+        print(f"DEBUG: Selected {len(unseen_responses)} responses ({len([r for index, r in enumerate(unseen_responses) if r.get('id', f'auto_{index}') not in seen_response_ids])} unseen)")
+        return unseen_responses
+
     def analyze_feedback_patterns(self, feedback_data, results, classes):
         """Analyze Step 6 feedback to identify patterns in misclassifications"""
         try:
@@ -1320,7 +1352,8 @@ Use simple, readable formatting with em dashes (—) for bullets. Focus on the t
         session_obj['workflow_state'].update({
             'step': self.session.get('step', 1),
             'selected_example': self.session.get('selected_example', ''),
-            'iteration_count': self.get_iteration_count()
+            'iteration_count': self.get_iteration_count(),
+            'seen_response_ids': self.session.get('seen_response_ids', [])
         })
         
         # Update score description from session
@@ -1329,7 +1362,7 @@ Use simple, readable formatting with em dashes (—) for bullets. Focus on the t
         
         self.save_consolidated_session(session_obj)
 
-    def save_results_to_file(self, results):
+    def save_results_to_file(self, results, original_indices=None):
         """Save results to consolidated session only (no legacy files)"""
         # Update consolidated session with results
         try:
@@ -1347,9 +1380,20 @@ Use simple, readable formatting with em dashes (—) for bullets. Focus on the t
             consolidated_results = []
             
             for i, result in enumerate(results):
-                response_id = i + 1  # Default
-                if i < len(responses):
-                    response_id = responses[i].get('id', i + 1)
+                # Use original_indices if provided, otherwise fall back to sequential
+                if original_indices and i < len(original_indices):
+                    original_idx = original_indices[i]
+                    # Get response ID from the original response at that index
+                    if original_idx < len(responses):
+                        response_id = responses[original_idx].get('id', original_idx + 1)
+                    else:
+                        response_id = original_idx + 1
+                    print(f"DEBUG: Result {i} maps to original index {original_idx}, response_id: {response_id}")
+                else:
+                    # Fallback to old logic
+                    response_id = i + 1
+                    if i < len(responses):
+                        response_id = responses[i].get('id', i + 1)
                 
                 consolidated_results.append({
                     'response_id': response_id,
