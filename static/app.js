@@ -325,7 +325,36 @@ $(document).ready(function() {
         // Calculate total reviewed for the request
         const totalReviewed = $('.review-item').length;
         
-        button.prop('disabled', true).text('Processing Feedback...');
+        button.prop('disabled', true)
+              .text('🔄 Analyzing Feedback & Improving Instructions...')
+              .addClass('btn-processing');
+        
+        // Add processing indicator
+        const processingIndicator = $('<div class="processing-indicator">')
+            .html(`
+                <div class="processing-spinner"></div>
+                <div class="processing-steps">
+                    <div class="step-item active">📊 Analyzing your feedback...</div>
+                    <div class="step-item">🔧 Generating improved instructions...</div>
+                    <div class="step-item">✅ Applying improvements...</div>
+                </div>
+            `)
+            .insertAfter(button.closest('.action-buttons-row'));
+        
+        // Progressive step updates
+        setTimeout(() => {
+            if (processingIndicator.length) {
+                processingIndicator.find('.step-item').removeClass('active');
+                processingIndicator.find('.step-item:eq(1)').addClass('active');
+            }
+        }, 2000);
+        
+        setTimeout(() => {
+            if (processingIndicator.length) {
+                processingIndicator.find('.step-item').removeClass('active');
+                processingIndicator.find('.step-item:eq(2)').addClass('active');
+            }
+        }, 4000);
         
         // Submit feedback
         $.ajax({
@@ -343,18 +372,27 @@ $(document).ready(function() {
                 console.log('Response status:', response.status);
                 console.log('Response redirect:', response.redirect);
                 
+                // Clean up processing indicator
+                processingIndicator.remove();
+                
                 if (response.status === 'no_changes') {
                     console.log('Handling no_changes case');
                     alert(response.message);
-                    button.prop('disabled', false);
-                    button.text('Submit Feedback & Improve Instructions');
+                    button.prop('disabled', false)
+                          .text('Submit Feedback & Improve Instructions')
+                          .removeClass('btn-processing');
                 } else if (response.status === 'max_iterations') {
                     console.log('Handling max_iterations case');
                     alert(response.message);
-                    button.prop('disabled', false);
-                    button.text('Submit Feedback & Improve Instructions');
+                    button.prop('disabled', false)
+                          .text('Submit Feedback & Improve Instructions')
+                          .removeClass('btn-processing');
                 } else if (response.status === 'iterate') {
                     console.log('Handling iterate case - redirecting to:', response.redirect);
+                    // Update final step before redirect
+                    processingIndicator.find('.step-item').removeClass('active');
+                    processingIndicator.find('.step-item:eq(2)').addClass('active');
+                    
                     try {
                         console.log('Attempting window.location.href redirect...');
                         window.location.href = response.redirect;
@@ -371,6 +409,9 @@ $(document).ready(function() {
                         window.location.href = response.redirect;
                     } else {
                         console.log('No redirect URL in response');
+                        button.prop('disabled', false)
+                              .text('Submit Feedback & Improve Instructions')
+                              .removeClass('btn-processing');
                     }
                 }
             },
@@ -385,7 +426,11 @@ $(document).ready(function() {
                 console.error('XHR Response Headers:', xhr.getAllResponseHeaders());
                 console.error('========================');
                 
-                button.prop('disabled', false).text('Submit Feedback & Improve Instructions');
+                // Clean up processing indicator and reset button
+                processingIndicator.remove();
+                button.prop('disabled', false)
+                      .text('Submit Feedback & Improve Instructions')
+                      .removeClass('btn-processing');
                 alert('Error submitting feedback. Check console for details.');
             },
             timeout: 30000, // Increase to 30 second timeout
