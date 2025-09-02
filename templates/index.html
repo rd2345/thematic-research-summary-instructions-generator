@@ -35,7 +35,7 @@
             {% if step == 7.5 %}
                 <div class="step active">
                     <span class="step-number">7.5</span>
-                    <span class="step-name">Prompt Analysis</span>
+                    <span class="step-name">{% if dev_mode %}Review Changes (Dev){% else %}Prompt Analysis{% endif %}</span>
                 </div>
             {% endif %}
             {% if step == 8 %}

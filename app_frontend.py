@@ -624,38 +624,67 @@ def submit_feedback():
             # Create intelligent diff
             diff_data = backend.create_intelligent_diff(original_prompt, improved_prompt)
             
-            # Auto-apply the improved prompt (skip manual approval)
-            print(f"DEBUG: Auto-applying improved prompt for iteration {current_iteration + 1}")
-            backend.save_consolidated_session_data('initial_prompt', improved_prompt)
-            
-            # Update iteration count
-            new_iteration_count = backend.increment_iteration_count()
-            
-            # Store iteration history with auto-applied flag
-            iteration_history = backend.get_consolidated_session_data('iteration_history') or []
-            iteration_history.append({
-                'iteration': new_iteration_count,
-                'original_prompt': original_prompt,
-                'improved_prompt': improved_prompt,
-                'rationale': rationale,
-                'feedback_analysis': feedback_analysis,
-                'changes_count': changes_count,
-                'auto_applied': True  # Flag to indicate this was automatically applied
-            })
-            backend.save_consolidated_session_data('iteration_history', iteration_history)
-            
-            # Clear current iteration data since we've applied it
-            backend.save_consolidated_session_data('current_iteration_data', {})
-            
-            print(f"DEBUG: About to sync session data...")
-            sync_session_data(backend)
-            print(f"DEBUG: Session data synced successfully")
+            if DEV_MODE:
+                # Dev mode: Save iteration data and go to Step 7.5 for manual review
+                print(f"DEBUG: Dev mode - saving iteration data for manual review")
+                iteration_data = {
+                    'iteration_number': current_iteration + 1,
+                    'original_prompt': original_prompt,
+                    'improved_prompt': improved_prompt,
+                    'rationale': rationale,
+                    'feedback_analysis': feedback_analysis,
+                    'diff_data': diff_data
+                }
+                backend.save_consolidated_session_data('current_iteration_data', iteration_data)
+                
+                # Store iteration history for tracking
+                iteration_history = backend.get_consolidated_session_data('iteration_history') or []
+                iteration_history.append({
+                    'iteration': current_iteration + 1,
+                    'feedback_analysis': feedback_analysis,
+                    'rationale': rationale,
+                    'changes_count': changes_count,
+                    'pending_review': True  # Flag for dev mode pending review
+                })
+                backend.save_consolidated_session_data('iteration_history', iteration_history)
+                
+                sync_session_data(backend)
+                
+                # Redirect to Step 7.5 for manual approval
+                redirect_url = url_for('show_step', step_num=7.5)
+                print(f"DEBUG: Dev mode - redirecting to Step 7.5: {redirect_url}")
+                
+            else:
+                # Production mode: Auto-apply the improved prompt (skip manual approval)
+                print(f"DEBUG: Production mode - auto-applying improved prompt for iteration {current_iteration + 1}")
+                backend.save_consolidated_session_data('initial_prompt', improved_prompt)
+                
+                # Update iteration count
+                new_iteration_count = backend.increment_iteration_count()
+                
+                # Store iteration history with auto-applied flag
+                iteration_history = backend.get_consolidated_session_data('iteration_history') or []
+                iteration_history.append({
+                    'iteration': new_iteration_count,
+                    'original_prompt': original_prompt,
+                    'improved_prompt': improved_prompt,
+                    'rationale': rationale,
+                    'feedback_analysis': feedback_analysis,
+                    'changes_count': changes_count,
+                    'auto_applied': True  # Flag to indicate this was automatically applied
+                })
+                backend.save_consolidated_session_data('iteration_history', iteration_history)
+                
+                # Clear current iteration data since we've applied it
+                backend.save_consolidated_session_data('current_iteration_data', {})
+                
+                sync_session_data(backend)
+                
+                # Redirect directly to Step 5 for re-inference
+                redirect_url = url_for('show_step', step_num=5)
+                print(f"DEBUG: Production mode - redirecting to Step 5: {redirect_url}")
             
             try:
-                print(f"DEBUG: Creating redirect URL...")
-                redirect_url = url_for('show_step', step_num=5)
-                print(f"DEBUG: Redirect URL created: {redirect_url}")
-                
                 print(f"DEBUG: Creating JSON response...")
                 response = jsonify({'status': 'iterate', 'redirect': redirect_url})
                 response.headers['Content-Type'] = 'application/json'
