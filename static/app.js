@@ -181,7 +181,7 @@ $(document).ready(function() {
             columnSelect.append(`<option value="${col}"${isResponseRecommended ? ' selected' : ''}>${col}${isResponseRecommended ? ' (recommended)' : ''}</option>`);
             
             // Conversation ID column with recommendations
-            const isIdRecommended = /conversation.*id|conv.*id|^id$|thread|ticket|session/i.test(col);
+            const isIdRecommended = /conversation.*id|conv.*id|^id$/i.test(col);
             conversationIdSelect.append(`<option value="${col}"${isIdRecommended && conversationIdSelect.val() === '' ? ' selected' : ''}>${col}${isIdRecommended ? ' (recommended)' : ''}</option>`);
             
             // Author column with recommendations

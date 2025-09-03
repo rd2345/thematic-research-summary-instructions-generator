@@ -52,12 +52,12 @@ INFERENCE_MODELS = {
     'haiku': {
         'arn': 'arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0',
         'name': 'Claude 3 Haiku',
-        'description': 'Fast & cost-effective (recommended)',
+        'description': '(default)',
         'max_tokens': 2000
     },
     'sonnet': {
         'arn': 'arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0',
-        'name': 'Claude 3.5 Sonnet', 
+        'name': 'Claude 3.7 Sonnet', 
         'description': 'Advanced reasoning & quality',
         'max_tokens': 2000
     }

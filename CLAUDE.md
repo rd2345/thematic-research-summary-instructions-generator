@@ -32,7 +32,7 @@ The main purpose is to build an interface that allows users to:
 
 The `reference_materials/llm_claude_example.py` shows how to integrate with Claude via AWS Bedrock:
 - AWS Bedrock runtime client setup for `us-east-1` region
-- Claude 3.5 Sonnet inference profile usage
+- Claude 3.7 Sonnet inference profile usage
 - Proper API request structure with anthropic_version and message format
 - Response handling and text extraction
 
@@ -196,6 +196,13 @@ The application guides users through a systematic 8-step process to create, test
 - Ensures coverage of different summary perspectives and focus areas
 - Returns structured JSON with names and detailed descriptions
 
+**Inference Model Selection (NEW):**
+- Dropdown to choose the model for Step 5 inference processing
+- **Claude 3 Haiku** (default): Fast & cost-effective, ideal for bulk processing
+- **Claude 3.7 Sonnet**: Advanced reasoning & quality when accuracy is critical
+- Model selection only affects inference; all other operations use Sonnet
+- Selected model stored in session and displayed in Step 6 results
+
 ---
 
 ### Step 4: Review Prompt (AI-Enhanced)
@@ -233,11 +240,12 @@ The application guides users through a systematic 8-step process to create, test
 **Technical Implementation:**
 - Extracts up to 50 response texts from survey data (configurable via `INFERENCE_LIMIT`)
 - **Dynamic progress display:** Shows actual count of conversations being processed
-- Uses `make_batch_inference_prompt()` to create single comprehensive prompt
-- Makes ONE API call via `generate_response()` instead of 50 individual calls
-- Parses batch JSON response using `get_summary_json()`
+- **Model Selection:** Uses the inference model selected in Step 3 (Haiku or Sonnet)
+- Uses `run_individual_inference()` for better summary quality with selected model
+- Makes individual API calls per response with the chosen model
 - Stores results in `session['inference_results']` with dual field structure
 - Exports results to timestamped JSON file in `temp_results/` directory
+- Tracks which model was used for later display in Step 6
 
 **Progress Display Features:**
 - **Real-time counting:** Progress bar denominator matches actual conversation count
@@ -268,6 +276,7 @@ The application guides users through a systematic 8-step process to create, test
 **Purpose:** Review AI-generated summaries and provide corrections to improve prompt effectiveness
 
 **User Experience:**
+- **Model Display:** Shows which model (Haiku or Sonnet) was used for inference
 - View all survey responses with AI-generated summaries
 - See up to 10 examples per summary type category (organized view)
 - Emergency fallback shows all responses if summary matching fails
@@ -275,6 +284,7 @@ The application guides users through a systematic 8-step process to create, test
 - Optionally add feedback text explaining changes
 - Visual indicators show modified responses
 - Submit feedback with change summary confirmation
+- **Unlimited Iterations:** Continue refining prompts as many times as needed
 
 **Technical Implementation:**
 - Displays `session['inference_results']` with comprehensive debug information
@@ -416,16 +426,16 @@ summary_prompt_gen_ux/
 
 - **AI-Powered Summary Type Generation:** Context-specific summary categories instead of generic templates
 - **Expert Prompt Creation:** Professional prompts with consistency guidelines  
-- **Efficient Batch Processing:** 50x faster and cheaper than individual API calls
+- **Flexible Model Selection:** Choose between Claude 3 Haiku (fast/economical) or Claude 3.7 Sonnet (quality) for inference
 - **CSV Upload Support:** Import custom survey data with conversation grouping
 - **Dynamic Progress Display:** Real-time progress tracking with accurate conversation counts
 - **Export Instructions Feature:** Copy final prompts as JSON for external use
 - **Interactive Feedback Interface:** Visual distinction between AI vs human corrections
+- **Unlimited Iterations:** No artificial limits - refine prompts as many times as needed
 - **Robust Session Management:** Dual-layer persistence with backend consolidation
 - **Cross-browser Compatibility:** Modern clipboard API with fallback support
 - **Robust Error Handling:** Comprehensive fallbacks and debug information
 - **Results Export:** Timestamped JSON files for analysis and debugging
-- **User Feedback Integration:** Unlimited iterations for prompt refinement based on feedback
 - **Professional UI/UX:** Progress tracking, change indicators, and intuitive workflow
 
 ## Usage Examples
@@ -436,25 +446,56 @@ summary_prompt_gen_ux/
 
 1. **Step 1:** Select "Customer Satisfaction Survey" (15 responses) OR upload CSV file with conversation data
 2. **Step 2:** Enter "I want to create summaries focusing on key satisfaction themes, sentiment patterns, and specific product feedback"  
-3. **Step 3:** Review AI-generated summary types:
-   - "Key Satisfaction Themes" - Main topics and themes mentioned across responses
-   - "Overall Sentiment Patterns" - Emotional tone and satisfaction levels
-   - "Specific Product Feedback" - Concrete mentions of product features
-   - "General Comments" - Other miscellaneous feedback not fitting other categories
+3. **Step 3:** Review AI-generated summary types and **select inference model**:
+   - AI generates: "Key Satisfaction Themes", "Overall Sentiment Patterns", "Specific Product Feedback", "General Comments"
+   - Choose **Claude 3 Haiku** (fast/economical) or **Claude 3.7 Sonnet** (quality) for processing
 4. **Step 4:** Review and edit comprehensive AI-generated summarization prompt (15+ lines)
-5. **Step 5:** Batch process all 15 responses in ~3 seconds with dynamic progress tracking
-6. **Step 6:** Review results, refine 2-3 summaries, provide feedback
+5. **Step 5:** Process all 15 responses using selected model with dynamic progress tracking
+6. **Step 6:** Review results (shows which model was used), refine summaries, provide unlimited feedback
 7. **Step 7:** View final results: 4 comprehensive summary categories with key insights extracted
 8. **Step Final:** Click "I'm Happy - Export Instructions" → Copy final prompt as JSON string for external use
 
 ### Expected Performance
-- **Processing Time:** 3-5 seconds for 50 responses (vs 2-3 minutes individually)
-- **API Cost:** ~$0.02 per batch (vs ~$1.00 for 50 individual calls)
-- **Quality:** Enhanced through user feedback and refinement capabilities
+
+**With Claude 3 Haiku (Default):**
+- **Processing Time:** 2-3 seconds per response (faster than Sonnet)
+- **API Cost:** ~60-80% cheaper than Claude 3.7 Sonnet
+- **Quality:** Good for most summarization tasks
+- **Best for:** Bulk processing, cost optimization
+
+**With Claude 3.7 Sonnet (Optional):**
+- **Processing Time:** 3-5 seconds per response (higher quality takes time)
+- **API Cost:** Higher but provides premium quality
+- **Quality:** Superior reasoning and nuanced understanding
+- **Best for:** Complex summaries requiring detailed analysis
+
+**Model Selection Benefits:**
+- **Cost Optimization:** Use Haiku for routine processing, Sonnet when quality is critical
+- **Flexibility:** Choose the right tool for each task
+- **Unlimited Iterations:** Refine prompts as many times as needed to perfect results
 
 ## AWS Configuration
 
-For Bedrock integration reference:
-- Region: `us-east-1`
-- Inference profile ARN: `arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0`
-- Max tokens: 2000 (configurable)
+For Bedrock integration, the application uses a dual-model approach:
+
+### Primary Model (for prompt generation, refinement)
+- **Model:** Claude 3.7 Sonnet
+- **ARN:** `arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+- **Usage:** Summary type generation, prompt creation, prompt refinement
+- **Max tokens:** 2000
+
+### Inference Model Options (for Step 5 processing)
+1. **Claude 3 Haiku (Default)**
+   - **ARN:** `arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0`
+   - **Usage:** Fast, cost-effective inference processing
+   - **Max tokens:** 2000
+   
+2. **Claude 3.7 Sonnet (Optional)**
+   - **ARN:** Same as primary model
+   - **Usage:** When higher quality summaries are needed
+   - **Max tokens:** 2000
+
+### Configuration
+- **Region:** `us-east-1`
+- **Client:** AWS Bedrock Runtime
+- **Authentication:** AWS credentials (environment variables or IAM role)
