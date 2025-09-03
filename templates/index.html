@@ -318,6 +318,24 @@
                                 required>{{ summary_instructions }}</textarea>
                         </div>
                         
+                        <!-- Inference Model Selection -->
+                        <div class="form-group mt-4">
+                            <label for="inference_model">
+                                <strong>Inference Model:</strong>
+                                <span class="text-muted">(for processing responses in Step 5)</span>
+                            </label>
+                            <select id="inference_model" name="inference_model" class="form-control">
+                                {% for key, model in inference_models.items() %}
+                                <option value="{{ key }}" {% if key == selected_model %}selected{% endif %}>
+                                    {{ model.name }} - {{ model.description }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Choose the model for summarizing responses. Haiku is faster and more economical for most use cases.
+                            </small>
+                        </div>
+                        
                         <button type="submit" class="btn btn-primary">Generate Instructions</button>
                     </form>
                 </div>
@@ -454,6 +472,12 @@
                 <div class="step-container">
                     <h2>Step 6: Provide Feedback</h2>
                     <p>Your corrections will be used to generate the final results:</p>
+                    
+                    {% if model_info %}
+                    <div class="alert alert-info">
+                        <strong>Model Used:</strong> {{ model_info.name }} - {{ model_info.description }}
+                    </div>
+                    {% endif %}
                     
                     <div class="feedback-container">
                         {% if results %}

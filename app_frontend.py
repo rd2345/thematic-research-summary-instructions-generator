@@ -154,9 +154,13 @@ def show_step(step_num):
     elif step_num == 3:
         summary_instructions = backend.get_consolidated_session_data('summary_instructions') or ''
         data_source_analysis = backend.get_consolidated_session_data('data_source_analysis') or {}
+        inference_models = backend.get_inference_models()
+        selected_model = session.get('inference_model', 'haiku')  # Default to haiku
         return render_template('index.html', **get_template_context(step=3, 
                              summary_instructions=summary_instructions,
-                             data_source_analysis=data_source_analysis))
+                             data_source_analysis=data_source_analysis,
+                             inference_models=inference_models,
+                             selected_model=selected_model))
     elif step_num == 4:
         prompt = backend.get_consolidated_session_data('initial_prompt') or ''
         return render_template('index.html', **get_template_context(step=4, prompt=prompt))
@@ -185,7 +189,14 @@ def show_step(step_num):
     elif step_num == 6:
         results = backend.load_results_from_file()
         classes = backend.get_consolidated_session_data('classes') or {}
-        return render_template('index.html', **get_template_context(step=6, results=results, classes=classes))
+        inference_model = backend.get_consolidated_session_data('inference_model') or 'haiku'
+        inference_models = backend.get_inference_models()
+        model_info = inference_models.get(inference_model, {})
+        return render_template('index.html', **get_template_context(step=6, 
+                             results=results, 
+                             classes=classes,
+                             inference_model=inference_model,
+                             model_info=model_info))
     elif step_num == 7.5:
         iteration_data = backend.get_consolidated_session_data('current_iteration_data') or {}
         if not iteration_data:
@@ -475,6 +486,12 @@ def process_step():
             # Save the edited summary instructions
             backend.save_consolidated_session_data('summary_instructions', edited_instructions)
             
+            # Save the selected inference model
+            inference_model = request.form.get('inference_model', 'haiku')
+            session['inference_model'] = inference_model
+            backend.save_consolidated_session_data('inference_model', inference_model)
+            print(f"DEBUG: Selected inference model: {inference_model}")
+            
             # Process edited data source analysis if present
             data_source_type = request.form.get('data_source_type', '').strip()
             business_context = request.form.get('business_context', '').strip()
@@ -575,9 +592,13 @@ def run_inference():
     print(f"DEBUG: Prompt length: {len(prompt)}")
     
     try:
+        # Get the selected inference model from session
+        inference_model = backend.get_consolidated_session_data('inference_model') or 'haiku'
+        print(f"DEBUG: Using inference model: {inference_model}")
+        
         # Use backend's individual inference method for better summary quality
-        print("DEBUG: Calling backend.run_individual_inference...")
-        results = backend.run_individual_inference(responses, prompt)
+        print(f"DEBUG: Calling backend.run_individual_inference with model {inference_model}...")
+        results = backend.run_individual_inference(responses, prompt, model_key=inference_model)
         
         if not results:
             print("DEBUG: No results generated")

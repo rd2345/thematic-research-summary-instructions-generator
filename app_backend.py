@@ -47,6 +47,23 @@ class SessionManager:
                         print(f"DEBUG: Failed to clean up {filename}: {e}")
 
 
+# Inference model options (only for Step 5 inference)
+INFERENCE_MODELS = {
+    'haiku': {
+        'arn': 'arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-haiku-20240307-v1:0',
+        'name': 'Claude 3 Haiku',
+        'description': 'Fast & cost-effective (recommended)',
+        'max_tokens': 2000
+    },
+    'sonnet': {
+        'arn': 'arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0',
+        'name': 'Claude 3.5 Sonnet', 
+        'description': 'Advanced reasoning & quality',
+        'max_tokens': 2000
+    }
+}
+
+
 class SummaryPromptBackend:
     """Core business logic for summary prompt generation"""
     
@@ -57,11 +74,25 @@ class SummaryPromptBackend:
         self.bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
         self.inference_profile_arn = 'arn:aws:bedrock:us-east-1:457209544455:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0'
     
-    def generate_response(self, prompt):
-        """Generate response from LLM"""
+    def generate_response(self, prompt, model_key=None):
+        """Generate response from LLM
+        
+        Args:
+            prompt: The prompt text
+            model_key: Optional key for inference model ('haiku' or 'sonnet')
+                      If None, uses the default model for non-inference tasks
+        """
+        # Use inference model if specified, otherwise use default
+        if model_key and model_key in INFERENCE_MODELS:
+            model_arn = INFERENCE_MODELS[model_key]['arn']
+            max_tokens = INFERENCE_MODELS[model_key]['max_tokens']
+        else:
+            model_arn = self.inference_profile_arn  # Keep existing for non-inference
+            max_tokens = 2000
+            
         request_payload = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 2000,
+            "max_tokens": max_tokens,
             "messages": [
                 {
                     "role": "user",
@@ -75,13 +106,17 @@ class SummaryPromptBackend:
             ]
         }
         response = self.bedrock_runtime.invoke_model(
-            modelId=self.inference_profile_arn,
+            modelId=model_arn,
             body=json.dumps(request_payload)
         )
         response_body = response['body'].read()
         text = json.loads(response_body)
         answer = text['content'][0]['text']
         return answer
+    
+    def get_inference_models(self):
+        """Return available models for inference"""
+        return INFERENCE_MODELS
 
     def load_survey_examples(self):
         """Load pre-built survey examples, with special handling for conversation datasets"""
@@ -782,8 +817,14 @@ Return scores in this format:
         except Exception as e:
             raise ValueError(f"Error extracting CSV column data: {str(e)}")
 
-    def run_batch_inference(self, responses, prompt):
-        """Run batch inference on survey responses"""
+    def run_batch_inference(self, responses, prompt, model_key='haiku'):
+        """Run batch inference on survey responses
+        
+        Args:
+            responses: List of survey responses
+            prompt: The prompt template
+            model_key: Inference model to use ('haiku' or 'sonnet'), defaults to 'haiku'
+        """
         try:
             # Extract response texts for batch processing
             response_texts = []
@@ -795,9 +836,10 @@ Return scores in this format:
             batch_prompt = self.make_batch_inference_prompt(prompt, response_texts)
             print(f"DEBUG: Created batch prompt with {len(batch_prompt)} characters")
             
-            # Make single LLM call for all responses
-            print("DEBUG: Calling generate_response...")
-            batch_response = self.generate_response(batch_prompt)
+            # Make single LLM call for all responses with specified model
+            model_name = INFERENCE_MODELS.get(model_key, {}).get('name', model_key)
+            print(f"DEBUG: Calling generate_response with {model_name}...")
+            batch_response = self.generate_response(batch_prompt, model_key=model_key)
             print(f"DEBUG: Got response with {len(batch_response)} characters")
             
             # Parse batch results
@@ -852,14 +894,21 @@ Return scores in this format:
                 })
             return results
 
-    def run_individual_inference(self, responses, prompt):
-        """Process conversations individually for better summary quality"""
-        print("DEBUG: Starting individual inference processing...")
+    def run_individual_inference(self, responses, prompt, model_key='haiku'):
+        """Process conversations individually for better summary quality
+        
+        Args:
+            responses: List of survey responses
+            prompt: The prompt template
+            model_key: Inference model to use ('haiku' or 'sonnet'), defaults to 'haiku'
+        """
+        model_name = INFERENCE_MODELS.get(model_key, {}).get('name', model_key)
+        print(f"DEBUG: Starting individual inference processing with {model_name}...")
         results = []
         
         for i, response in enumerate(responses):
             response_text = response.get('text', response.get('response', ''))
-            print(f"DEBUG: Processing conversation {i+1}/{len(responses)}")
+            print(f"DEBUG: Processing conversation {i+1}/{len(responses)} with {model_name}")
             
             # Create individual prompt for this conversation
             individual_prompt = f"""{prompt}
@@ -870,8 +919,8 @@ CONVERSATION TO SUMMARIZE:
 Please provide a comprehensive summary based on the instructions above."""
             
             try:
-                print(f"DEBUG: Generating summary for conversation {i+1}...")
-                summary = self.generate_response(individual_prompt).strip()
+                print(f"DEBUG: Generating summary for conversation {i+1} using {model_name}...")
+                summary = self.generate_response(individual_prompt, model_key=model_key).strip()
                 print(f"DEBUG: Generated summary length: {len(summary)} characters")
                 
                 # Store result with both new and legacy field names for compatibility
