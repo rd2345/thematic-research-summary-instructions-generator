@@ -162,52 +162,15 @@ SUMMARIZATION DESCRIPTION:
 {summary_description}
 
 Please create clear and concise instructions that are no longer than a 5 sentence paragraph. Only include the vital parts, do not be concerned that you are missing any details."""
+        llm_response = self.generate_response(instruction_generation_prompt)
+        # Clean up the response - remove any JSON formatting if present, just return the text
+        instructions = llm_response.strip()
+        # Basic validation that we got substantive instructions
+        if len(instructions) < 50:
+            raise ValueError("Generated instructions too short")
 
-        try:
-            llm_response = self.generate_response(instruction_generation_prompt)
-            
-            # Clean up the response - remove any JSON formatting if present, just return the text
-            instructions = llm_response.strip()
-            
-            # Basic validation that we got substantive instructions
-            if len(instructions) < 50:
-                print("Generated instructions too short, using default")
-                return self.generate_default_summary_instructions(summary_description)
-                
-            return instructions
-            
-        except Exception as e:
-            print(f"Error generating summary instructions: {e}")
-            return self.generate_default_summary_instructions(summary_description)
-    
-    def generate_default_summary_instructions(self, summary_description):
-        """Generate default summarization instructions as fallback"""
-        return f"""## Summary Instructions
+        return instructions
 
-Based on your description: "{summary_description}"
-
-**Focus Areas:**
-- Extract main topics and themes from conversations
-- Identify key issues, concerns, or requests raised
-- Note resolution status and outcomes where applicable
-
-**Key Information to Capture:**
-- Primary purpose of each conversation
-- Main participant roles (agent, customer, etc.)
-- Critical decisions or actions taken
-- Any follow-up items or next steps
-
-**Structure Guidelines:**
-- Start with brief overview of conversation purpose
-- Group related points together logically
-- Use bullet points for clarity
-- Keep summaries concise but comprehensive
-
-**Quality Standards:**
-- Ensure accuracy to original conversation content
-- Maintain neutral, professional tone
-- Include enough detail for someone to understand the conversation without reading the full transcript
-- Highlight any urgent or high-priority items"""
 
     def generate_initial_prompt_for_summarization(self, summary_description, summary_instructions, data_source_analysis=None):
         """Generate initial prompt for conversation summarization using the detailed instructions and data source context"""
