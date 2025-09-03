@@ -425,7 +425,7 @@ summary_prompt_gen_ux/
 - **Cross-browser Compatibility:** Modern clipboard API with fallback support
 - **Robust Error Handling:** Comprehensive fallbacks and debug information
 - **Results Export:** Timestamped JSON files for analysis and debugging
-- **User Feedback Integration:** Single feedback cycle for summary corrections
+- **User Feedback Integration:** Unlimited iterations for prompt refinement based on feedback
 - **Professional UI/UX:** Progress tracking, change indicators, and intuitive workflow
 
 ## Usage Examples

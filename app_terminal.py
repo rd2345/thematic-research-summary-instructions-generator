@@ -909,12 +909,11 @@ class TerminalInterface:
         
         # Offer iteration option
         iteration_count = self.backend.get_iteration_count()
-        max_iterations = 3
         
-        if iteration_count < max_iterations and feedback_corrections:
+        if feedback_corrections:
             print(f"PROMPT IMPROVEMENT AVAILABLE:")
             print(f"Based on your feedback, I can improve the prompt to reduce similar errors.")
-            print(f"Current iteration: {iteration_count}/{max_iterations}")
+            print(f"Current iteration: {iteration_count}")
             
             improve = input("\nWould you like to improve the prompt and run another iteration? (y/n): ").strip().lower()
             

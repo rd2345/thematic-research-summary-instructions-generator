@@ -693,8 +693,8 @@ def submit_feedback():
         changes_count = feedback_data.get('changes_count', 0)
         current_iteration = backend.get_iteration_count()
         
-        if changes_count > 0 and current_iteration < 3:
-            # There are changes and we can iterate - trigger iteration automatically
+        if changes_count > 0:
+            # There are changes so we can iterate - trigger iteration automatically
             print(f"DEBUG: Changes detected ({changes_count}), starting iteration {current_iteration + 1}")
             
             # Load required data for iteration
@@ -796,10 +796,10 @@ def submit_feedback():
             })
             response.headers['Content-Type'] = 'application/json'
         else:
-            # Max iterations reached
+            # This shouldn't happen but handle gracefully
             response = jsonify({
-                'status': 'max_iterations',
-                'message': 'Maximum iterations (3) reached. The instructions have been refined based on your feedback.'
+                'status': 'error',
+                'message': 'Unexpected state in feedback processing'
             })
             response.headers['Content-Type'] = 'application/json'
         
@@ -816,11 +816,6 @@ def iterate_prompt():
     """Initiate prompt iteration based on Step 6 feedback"""
     try:
         backend = get_backend()
-        
-        # Check iteration limit
-        current_iteration = backend.get_iteration_count()
-        if current_iteration >= 3:
-            return jsonify({'status': 'error', 'message': 'Maximum iteration limit (3) reached'}), 400
         
         # Load required data using backend
         user_feedback = backend.get_consolidated_session_data('user_feedback') or {}

@@ -387,12 +387,6 @@ $(document).ready(function() {
                     button.prop('disabled', false)
                           .text('Submit Feedback & Improve Instructions')
                           .removeClass('btn-processing');
-                } else if (response.status === 'max_iterations') {
-                    console.log('Handling max_iterations case');
-                    alert(response.message);
-                    button.prop('disabled', false)
-                          .text('Submit Feedback & Improve Instructions')
-                          .removeClass('btn-processing');
                 } else if (response.status === 'iterate') {
                     console.log('Handling iterate case - redirecting to:', response.redirect);
                     // Update final step before redirect
