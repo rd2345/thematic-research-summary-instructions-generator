@@ -177,7 +177,7 @@ $(document).ready(function() {
         
         response.columns.forEach(col => {
             // Response column with recommendations
-            const isResponseRecommended = /comment|response|text|feedback|review|answer|content|message/i.test(col);
+            const isResponseRecommended = /comment|response|text|feedback|review|answer|content|message|body/i.test(col);
             columnSelect.append(`<option value="${col}"${isResponseRecommended ? ' selected' : ''}>${col}${isResponseRecommended ? ' (recommended)' : ''}</option>`);
             
             // Conversation ID column with recommendations
