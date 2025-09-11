@@ -609,11 +609,8 @@ Return scores in this format:
                     if conv_id not in conversations:
                         conversations[conv_id] = []
                     
-                    # Use the actual author value from the CSV
-                    author = author_value
-                    
                     conversations[conv_id].append({
-                        'author': author,
+                        'author': author_value,
                         'text': response_text,
                         'row_order': row_index  # Preserve CSV order
                     })
@@ -671,11 +668,8 @@ Return scores in this format:
                         if conv_id not in conversations:
                             conversations[conv_id] = []
                         
-                        # Use the actual author value from the CSV
-                        author = author_value
-                        
                         conversations[conv_id].append({
-                            'author': author,
+                            'author': author_value,
                             'text': response_text,
                             'row_order': row_index  # Preserve CSV order
                         })
