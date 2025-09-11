@@ -609,12 +609,8 @@ Return scores in this format:
                     if conv_id not in conversations:
                         conversations[conv_id] = []
                     
-                    # Determine if this is Agent or Customer based on author column
-                    author = "Customer"  # Default
-                    if any(term in author_value.lower() for term in ['agent', 'support', 'rep', 'staff', 'operator']):
-                        author = "Agent"
-                    elif any(term in author_value.lower() for term in ['customer', 'user', 'client', 'caller']):
-                        author = "Customer"
+                    # Use the actual author value from the CSV
+                    author = author_value
                     
                     conversations[conv_id].append({
                         'author': author,
@@ -675,12 +671,8 @@ Return scores in this format:
                         if conv_id not in conversations:
                             conversations[conv_id] = []
                         
-                        # Determine if this is Agent or Customer based on author column
-                        author = "Customer"  # Default
-                        if any(term in author_value.lower() for term in ['agent', 'support', 'rep', 'staff', 'operator']):
-                            author = "Agent"
-                        elif any(term in author_value.lower() for term in ['customer', 'user', 'client', 'caller']):
-                            author = "Customer"
+                        # Use the actual author value from the CSV
+                        author = author_value
                         
                         conversations[conv_id].append({
                             'author': author,
