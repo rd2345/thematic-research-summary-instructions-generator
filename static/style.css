@@ -589,6 +589,7 @@ h1 {
     flex: 0 0 35%;
     min-height: 150px;
     max-height: 300px;
+    overflow-y: auto;
 }
 
 .conversation-column h5,
