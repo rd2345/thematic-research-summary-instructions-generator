@@ -6,7 +6,7 @@ DEV_MODE=false
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --dev_mode|--dev)
+        -d|--dev_mode|--dev)
             DEV_MODE=true
             shift
             ;;

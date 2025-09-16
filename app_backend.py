@@ -161,7 +161,7 @@ class SummaryPromptBackend:
 SUMMARIZATION DESCRIPTION:
 {summary_description}
 
-Please create clear and concise instructions that are no longer than a 5 sentence paragraph. Only include the vital parts, do not be concerned that you are missing any details."""
+Please create clear and concise instructions that are no longer than ten bullet points each starting with a dash. Only include the vital parts, do not be concerned that you are missing any details."""
         llm_response = self.generate_response(instruction_generation_prompt)
         # Clean up the response - remove any JSON formatting if present, just return the text
         instructions = llm_response.strip()
@@ -200,13 +200,18 @@ ORIGINAL SUMMARY DESCRIPTION:
 DETAILED SUMMARY INSTRUCTIONS:
 {summary_instructions}
 
+If bullet points are asked for:
+- Use a dash "- " to starteach bullet point
+- Do not include nested bullet points
+
 Please create a prompt that:
-1. Clearly explains the summarization task
-2. Incorporates the detailed instructions provided
-3. Takes into account the data source type and participant roles when relevant
-4. Ensures consistent, high-quality summaries appropriate for the business context
-5. Handles edge cases (unclear conversations, off-topic content, etc.)
-6. Specifies the desired output format
+1. Incorporates the detailed instructions provided
+2. Gives the data source context for the conversation
+3. Ensures consistent, high-quality summaries appropriate for the business context
+4. Handles edge cases (unclear conversations, off-topic content, etc.)
+5. Specifies the desired output format
+6. Includes instructions to not give any preamble or explanation, but only returns the summary
+7. Includes instructions to not give a blow-by-blow account of the conversation, but ONLY the summary that is asked for in the instructions
 
 The prompt should be professional, clear, and designed for batch processing of multiple conversations from this specific data source."""
 
@@ -352,77 +357,7 @@ Analyze carefully and provide specific, accurate insights based on the actual co
             "business_context": "A service-oriented organization providing customer support"
         }
 
-    def generate_initial_summary_prompt(self, summary_description, summary_types):
-        """Generate an intelligent summarization prompt using LLM based on description and summary types"""
-        
-        # Prepare class information for the prompt generation
-        class_details = []
-        class_names = []
-        for key, class_info in summary_types.items():
-            class_details.append(f"- {class_info['name']}: {class_info['description']}")
-            class_names.append(class_info['name'])
-        
-        prompt_generation_request = f"""Create an expert-level prompt for batch summarization of survey responses. The prompt will be used to summarize multiple survey responses simultaneously in a single API call.
 
-    SUMMARIZATION CRITERIA:
-    {summary_description}
-
-CLASSIFICATION CATEGORIES:
-{chr(10).join(class_details)}
-
-Please generate a professional prompt that:
-1. Clearly explains the summarization task and criteria
-2. Provides detailed guidance on how to classify responses consistently across a batch
-3. Includes specific instructions for edge cases or ambiguous responses
-4. Emphasizes consistency when processing multiple responses together
-5. Instructs the AI to process multiple responses provided in JSON format
-6. Uses the exact category names: {', '.join(class_names)}
-7. Should NOT include output format instructions (this will be added separately)
-8. Is concise and to the point.
-
-IMPORTANT: This prompt will be used for BATCH processing where multiple survey responses will be provided in a JSON object with numeric keys (0, 1, 2, etc.) and the AI must return classifications for all responses in a JSON format.
-
-The prompt should be written for an AI assistant that will be classifying multiple survey responses at once. Make it clear to understand and concise.
-
-Generate the complete prompt now:"""
-
-        try:
-            llm_response = self.generate_response(prompt_generation_request)
-            
-            # Clean up the response - this will be used for batch processing
-            generated_prompt = llm_response.strip()
-            
-            # For batch processing, we don't add the individual CLASSIFICATION format
-            # The batch format will be added by make_batch_inference_prompt()
-            return generated_prompt
-            
-        except Exception as e:
-            print(f"Error generating intelligent prompt: {e}")
-            # Fallback to template-based approach
-            return self.generate_template_summary_prompt(summary_description, summary_types)
-
-    def generate_template_summary_prompt(self, summary_description, summary_types):
-        """Fallback template-based prompt generation"""
-        class_descriptions = []
-        for key, class_info in summary_types.items():
-            class_descriptions.append(f"- {class_info['name']}: {class_info['description']}")
-        
-        prompt = f"""You are tasked with scoring survey responses based on the following criteria:
-
-SCORING CRITERIA:
-{score_description}
-
-CLASSIFICATION CATEGORIES:
-{chr(10).join(class_descriptions)}
-
-For each survey response, you must:
-1. Read the response carefully
-2. Classify it into one of the categories above
-3. Provide your classification in this exact format: CLASSIFICATION: [category_name]
-
-Please be consistent in your classifications and consider the nuances of each response."""
-        
-        return prompt
 
     def make_batch_inference_prompt(self, instructions, responses):
         """Create a batch inference prompt for processing multiple survey responses at once"""
@@ -766,82 +701,6 @@ Return scores in this format:
         except Exception as e:
             raise ValueError(f"Error extracting CSV column data: {str(e)}")
 
-    def run_batch_inference(self, responses, prompt, model_key='haiku'):
-        """Run batch inference on survey responses
-        
-        Args:
-            responses: List of survey responses
-            prompt: The prompt template
-            model_key: Inference model to use ('haiku' or 'sonnet'), defaults to 'haiku'
-        """
-        try:
-            # Extract response texts for batch processing
-            response_texts = []
-            for response in responses:
-                response_text = response.get('text', response.get('response', ''))
-                response_texts.append(response_text)
-            
-            # Create batch inference prompt
-            batch_prompt = self.make_batch_inference_prompt(prompt, response_texts)
-            print(f"DEBUG: Created batch prompt with {len(batch_prompt)} characters")
-            
-            # Make single LLM call for all responses with specified model
-            model_name = INFERENCE_MODELS.get(model_key, {}).get('name', model_key)
-            print(f"DEBUG: Calling generate_response with {model_name}...")
-            batch_response = self.generate_response(batch_prompt, model_key=model_key)
-            print(f"DEBUG: Got response with {len(batch_response)} characters")
-            
-            # Parse batch results
-            try:
-                score_json = self.get_score_json(batch_response)
-                print(f"Parsed score_json: {score_json}")  # Debug logging
-                
-                # Convert batch results to individual results format
-                results = []
-                for i, response_text in enumerate(response_texts):
-                    str_index = str(i)
-                    if str_index in score_json:
-                        classification = score_json[str_index].strip()  # Clean up whitespace
-                        print(f"Response {i}: '{classification}'")  # Debug logging
-                    else:
-                        classification = 'error'
-                        print(f"Response {i}: Missing from batch response")  # Debug logging
-                    
-                    results.append({
-                        'response_text': response_text,
-                        'ai_classification': classification,
-                        'index': i
-                    })
-                
-                print(f"Created {len(results)} results")  # Debug logging
-                return results
-                
-            except Exception as parse_error:
-                # If batch parsing fails, create error results for all responses
-                print(f"Batch parsing error: {parse_error}")
-                results = []
-                for i, response_text in enumerate(response_texts):
-                    results.append({
-                        'response_text': response_text,
-                        'ai_classification': 'error',
-                        'index': i
-                    })
-                return results
-        
-        except Exception as e:
-            # If batch processing completely fails, create error results
-            print(f"=== DEBUG: Batch inference error: {e} ===")
-            import traceback
-            print(f"DEBUG: Full traceback: {traceback.format_exc()}")
-            results = []
-            for i, response in enumerate(responses):
-                response_text = response.get('text', response.get('response', ''))
-                results.append({
-                    'response_text': response_text,
-                    'ai_classification': 'error',
-                    'index': i
-                })
-            return results
 
     def run_individual_inference(self, responses, prompt, model_key='haiku'):
         """Process conversations individually for better summary quality
